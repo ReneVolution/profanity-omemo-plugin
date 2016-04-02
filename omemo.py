@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-
+import os
 import prof
 
 try:
     from omemo.state import OmemoState
 except ImportError:
     prof.log_error(u'Could not initiate python-omemo')
-
+    raise
 
 """ Plugin to allow to encrypt/decrypt messages using axolotl
 
@@ -51,10 +51,26 @@ Workflow:
     omitting the <payload> as follows:
 
 """
+HOME = os.path.expanduser("~")
+XDG_DATA_HOME = os.environ.get("XDG_DATA_HOME",
+                               os.path.join(HOME, ".local", "share"))
+
+
+def get_local_data_path():
+    # TODO: get current username
+    current_user = u'my_username@some_jaber.org'
+    safe_username = current_user.replace(u'@', u'_at_')
+
+    return os.path.join(XDG_DATA_HOME, u'profanity', u'omemo', safe_username)
+
+
+def get_db_path():
+    return os.path.join(get_local_data_path(), u'omemo.db')
 
 ################################################################################
 # Sending hooks
 ################################################################################
+
 
 def prof_on_message_stanza_send(stanza):
     pass
@@ -118,5 +134,6 @@ def prof_init(version, status):
     ]
     examples = []
 
+    # ensure the plugin is not registered if python-omemo is not available
     prof.register_command("/omemo", 1, 2, synopsis, description, args, examples, _parse_args)
     prof.register_ac("/omemo", [ "start", "end"])
