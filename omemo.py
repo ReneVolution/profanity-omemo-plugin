@@ -59,8 +59,10 @@ Workflow:
 def prof_on_message_stanza_send(stanza):
     pass
 
+
 def prof_on_presence_stanza_send(stanza):
     pass
+
 
 def prof_on_iq_stanza_send(stanza):
     pass
@@ -73,29 +75,48 @@ def prof_on_message_stanza_receive(stanza):
     # prof_incoming_message() and return FALSE
     return True
 
+
 def prof_on_presence_stanza_receive(stanza):
     # prof_incoming_message() and return FALSE
     return True
+
 
 def prof_on_iq_stanza_receive(stanza):
     # prof_incoming_message() and return FALSE
     return True
 
 ################################################################################
+# Plugin Entry Point
+################################################################################
+
+
+def _parse_args(*args):
+    """ Parse arguments given in command window
+
+    arg1: start || end
+    arg2: muc || jid (optional)
+
+    Starts or ends an encrypted chat session
+
+    """
+    pass
+
+################################################################################
 # Plugin init
 ################################################################################
+
 
 def prof_init(version, status):
     synopsis = [
         "/omemo",
-        "/omemo start|end [jid]",
+        "/omemo start|end [jid]"
     ]
 
     description = "Plugin to enable OMEMO encryption"
     args = [
-        [ "start|end <jid>", "Start an OMEMO based conversation with <jid> window or current window." ],
+        [ "start|end <jid>", "Start an OMEMO based conversation with <jid> window or current window." ]
     ]
     examples = []
 
-    prof.register_command("/omemo", 0, 3, synopsis, description, args, examples, _cmd_shortcuts)
+    prof.register_command("/omemo", 1, 2, synopsis, description, args, examples, _parse_args)
     prof.register_ac("/omemo", [ "start", "end"])
