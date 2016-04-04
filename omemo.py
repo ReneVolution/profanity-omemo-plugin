@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 import os
+
+try:
+  from lxml import etree as ET
+except ImportError:
+    # fallback to the default ElementTree module
+    import xml.etree.ElementTree as ET
+
 import prof
 
 try:
@@ -55,17 +62,63 @@ HOME = os.path.expanduser("~")
 XDG_DATA_HOME = os.environ.get("XDG_DATA_HOME",
                                os.path.join(HOME, ".local", "share"))
 
+__OMEMO_SESSIONS = {}
+__REQ_INCR = {}
 
-def get_local_data_path():
+################################################################################
+# Convenience methods
+################################################################################
+
+
+def _get_local_data_path():
     # TODO: get current username
-    current_user = u'my_username@some_jaber.org'
+    current_user = u'sqlitedb@local'
     safe_username = current_user.replace(u'@', u'_at_')
 
     return os.path.join(XDG_DATA_HOME, u'profanity', u'omemo', safe_username)
 
 
-def get_db_path():
-    return os.path.join(get_local_data_path(), u'omemo.db')
+def _get_db_path():
+    return os.path.join(_get_local_data_path(), u'omemo.db')
+
+
+def _get_request_increment(req_type):
+    global __REQ_INCR
+    last_req_id = __REQ_INCR.get(req_type)
+    if last_req_id:
+        # increment the last request id
+        req_id = last_req_id + 1
+    else:
+        # we need to set an initial request id
+        req_id = 1
+
+    __REQ_INCR[req_type] = req_id
+
+    return u'{0}{1}'.format(req_type, req_id)
+
+################################################################################
+# Stanza handling
+################################################################################
+
+
+def _create_fetch_bundle_request(sender, recipient, device_id):
+    bundle_req_root = ET.Element('iq')
+    bundle_req_root.set('from', sender)
+    bundle_req_root.set('to', recipient)
+    bundle_req_root.set('id', _get_request_increment('fetch'))
+    pubsub_node = ET.SubElement(bundle_req_root, 'pubsub')
+    pubsub_node.set('xmlns', 'http://jabber.org/protocol/pubsub')
+    items_node = ET.SubElement(pubsub_node, 'items')
+    items_node.set('node', 'urn:xmpp:omemo:0:bundles:{}'.format(device_id))
+
+    return ET.tostring(bundle_req_root, encoding='utf8', method='xml')
+
+
+def _stanza__get_root_attributes(stanza):
+    xml = ET.fromstring(stanza)
+    xml_root = xml.getroot()
+
+    return xml_root.attrib
 
 ################################################################################
 # Sending hooks
@@ -86,6 +139,7 @@ def prof_on_iq_stanza_send(stanza):
 ################################################################################
 # Receiving hooks
 ################################################################################
+
 
 def prof_on_message_stanza_receive(stanza):
     # prof_incoming_message() and return FALSE
@@ -123,6 +177,7 @@ def _parse_args(*args):
 
 
 def prof_init(version, status):
+
     synopsis = [
         "/omemo",
         "/omemo start|end [jid]"
