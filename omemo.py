@@ -1,19 +1,25 @@
 # -*- coding: utf-8 -*-
+import prof
+
 import os
 
 try:
-  from lxml import etree as ET
+    import sqlite3
+except ImportError:
+    prof.log_error(u'Could not import sqlite3')
+    raise
+
+try:
+    from lxml import etree as ET
 except ImportError:
     # fallback to the default ElementTree module
     import xml.etree.ElementTree as ET
 
-import prof
 
 try:
     from omemo.state import OmemoState
 except ImportError:
-    prof.log_error(u'Could not initiate python-omemo')
-    raise
+    prof.cons_show(u'Could not import OmemoState')
 
 """ Plugin to allow to encrypt/decrypt messages using axolotl
 
@@ -62,7 +68,11 @@ HOME = os.path.expanduser("~")
 XDG_DATA_HOME = os.environ.get("XDG_DATA_HOME",
                                os.path.join(HOME, ".local", "share"))
 
+__OMEMO_ACCOUNT = None
+__OMEMO_BUNDLE = None
+__OMEMO_DEVICES = []
 __OMEMO_SESSIONS = {}
+__OMEMO_STATE = None
 __REQ_INCR = {}
 
 ################################################################################
@@ -70,9 +80,14 @@ __REQ_INCR = {}
 ################################################################################
 
 
+def db():
+    """ Open in memory sqlite db and create a table. """
+    conn = sqlite3.connect(':memory:', check_same_thread=False)
+    return conn
+
+
 def _get_local_data_path():
-    # TODO: get current username
-    current_user = u'sqlitedb@local'
+    current_user = __OMEMO_ACCOUNT
     safe_username = current_user.replace(u'@', u'_at_')
 
     return os.path.join(XDG_DATA_HOME, u'profanity', u'omemo', safe_username)
@@ -95,6 +110,55 @@ def _get_request_increment(req_type):
     __REQ_INCR[req_type] = req_id
 
     return u'{0}{1}'.format(req_type, req_id)
+
+################################################################################
+# OMEMO helper
+################################################################################
+
+
+def _init_omemo():
+    if __OMEMO_ACCOUNT:
+        global __OMEMO_STATE
+        __OMEMO_STATE = OmemoState(db())
+        global __OMEMO_BUNDLE
+        __OMEMO_BUNDLE = __OMEMO_STATE.bundle()
+        _announce_omemo_support()
+
+
+def _announce_omemo_support():
+    """ Devices MUST subscribe to ‘urn:xmpp:omemo:0:devicelist via PEP
+
+    With the initial announce of own_device_id, we also subscribe to updates
+    on the devicelist channel.
+    """
+    announce_template = '''<iq from='{from_jid}' type='set' id='{req_id}'>
+                            <pubsub xmlns='http://jabber.org/protocol/pubsub'>
+                                <publish node='urn:xmpp:omemo:0:devicelist'>
+                                <item>
+                                    <list xmlns='urn:xmpp:omemo:0'>
+                                    <device id='{device_id}' />
+                                    </list>
+                                </item>
+                                </publish>
+                            </pubsub>
+                           </iq>
+                        '''
+
+    iq_msg = announce_template.format(form_jid=__OMEMO_ACCOUNT,
+                                      req_id=_get_request_increment(u'ann'),
+                                      device_id=__OMEMO_STATE.own_device_id)
+
+    prof.send_stanza(iq_msg)
+
+
+def _start_omemo_session(jid):
+    # should be started before the first message is sent.
+    pass
+
+
+def _end_omemo_session(jid):
+    # TODO: catch window_closed as well
+    pass
 
 ################################################################################
 # Stanza handling
@@ -176,7 +240,10 @@ def _parse_args(*args):
 ################################################################################
 
 
-def prof_init(version, status):
+def prof_init(version, status, account_name, fulljid):
+
+    global __OMEMO_ACCOUNT
+    __OMEMO_ACCOUNT = fulljid
 
     synopsis = [
         "/omemo",
@@ -185,10 +252,16 @@ def prof_init(version, status):
 
     description = "Plugin to enable OMEMO encryption"
     args = [
-        [ "start|end <jid>", "Start an OMEMO based conversation with <jid> window or current window." ]
+        ["start|end <jid>", ("Start an OMEMO based conversation with <jid> "
+                             "window or current window.")]
     ]
+
     examples = []
 
     # ensure the plugin is not registered if python-omemo is not available
-    prof.register_command("/omemo", 1, 2, synopsis, description, args, examples, _parse_args)
-    prof.register_ac("/omemo", [ "start", "end"])
+    prof.register_command("/omemo", 1, 2,
+                          synopsis, description, args, examples, _parse_args)
+
+    prof.completer_add("/omemo", ["start", "end"])
+
+    _init_omemo()
