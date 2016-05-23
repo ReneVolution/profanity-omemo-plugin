@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-import prof
-
 import os
+import sys
+sys.path.append("/Applications/PyCharm.app/Contents/debug-eggs/pycharm-debug.egg")
+
+import prof
 
 try:
     import sqlite3
@@ -20,6 +22,7 @@ try:
     from omemo.state import OmemoState
 except ImportError:
     prof.cons_show(u'Could not import OmemoState')
+    raise
 
 """ Plugin to allow to encrypt/decrypt messages using axolotl
 
@@ -67,6 +70,13 @@ Workflow:
 HOME = os.path.expanduser("~")
 XDG_DATA_HOME = os.environ.get("XDG_DATA_HOME",
                                os.path.join(HOME, ".local", "share"))
+
+# OMEMO static namespace vars
+NS_OMEMO = u'eu.siacs.conversations.axolotl'
+NS_DEVICE_LIST = NS_OMEMO + u'.devicelist'
+NS_DEVICE_LIST_NOTIFY = NS_DEVICE_LIST + u'+notify'
+NS_BUNDLES = NS_OMEMO + u'.bundle'
+
 
 __OMEMO_ACCOUNT = None
 __OMEMO_BUNDLE = None
@@ -116,43 +126,87 @@ def _get_request_increment(req_type):
 ################################################################################
 
 
-def _init_omemo():
-    if __OMEMO_ACCOUNT:
-        global __OMEMO_STATE
-        __OMEMO_STATE = OmemoState(db())
-        global __OMEMO_BUNDLE
-        __OMEMO_BUNDLE = __OMEMO_STATE.bundle()
-        _announce_omemo_support()
+def _init_omemo(account_name):
+    global __OMEMO_ACCOUNT
+    __OMEMO_ACCOUNT = account_name
+    global __OMEMO_STATE
+    __OMEMO_STATE = OmemoState(db())
+    global __OMEMO_BUNDLE
+    __OMEMO_BUNDLE = __OMEMO_STATE.bundle
 
+    # subscribe to devicelist updates
+    prof.disco_add_feature(NS_DEVICE_LIST_NOTIFY)
 
-def _announce_omemo_support():
-    """ Devices MUST subscribe to ‘urn:xmpp:omemo:0:devicelist via PEP
+    _announce_bundle()
 
-    With the initial announce of own_device_id, we also subscribe to updates
-    on the devicelist channel.
+def test_send():
+
+    _announce_bundle()
+
+def _announce_bundle():
+    """ announce bundle info
+
     """
-    announce_template = '''<iq from='{from_jid}' type='set' id='{req_id}'>
-                            <pubsub xmlns='http://jabber.org/protocol/pubsub'>
-                                <publish node='urn:xmpp:omemo:0:devicelist'>
-                                <item>
-                                    <list xmlns='urn:xmpp:omemo:0'>
-                                    <device id='{device_id}' />
-                                    </list>
-                                </item>
-                                </publish>
-                            </pubsub>
-                           </iq>
+    announce_template = '''
+                        <iq from='{from_jid}' type='set' id='{req_id}'>
+                        <pubsub xmlns='http://jabber.org/protocol/pubsub'>
+                            <publish node='{bundles_ns}:{device_id}'>
+                            <item>
+                                <bundle xmlns='{omemo_ns}'>
+                                </bundle>
+                            </item>
+                            </publish>
+                        </pubsub>
+                        </iq>
                         '''
 
-    iq_msg = announce_template.format(form_jid=__OMEMO_ACCOUNT,
-                                      req_id=_get_request_increment(u'ann'),
-                                      device_id=__OMEMO_STATE.own_device_id)
+    bundle_msg = announce_template.format(from_jid=__OMEMO_ACCOUNT,
+                                          req_id=_get_request_increment(u'ann'),
+                                          device_id=__OMEMO_STATE.own_device_id,
+                                          bundle_ns=NS_BUNDLES,
+                                          omemo_ns=NS_OMEMO)
 
-    prof.send_stanza(iq_msg)
+    bundle_xml = ET.fromstring(bundle_msg)
+
+    # to be appended to announce_template
+    bundle_node = bundle_xml.find(u'bundle')
+    pre_key_signed_node = ET.SubElement(bundle_node, u'signedPreKeyPublic',
+                                        attrib={u'signedPreKeyId': u'1'})
+    pre_key_signed_node.text = __OMEMO_BUNDLE.get(u'signedPreKeyPublic')
+
+    signedPreKeySignature_node = ET.SubElement(bundle_node,
+                                               u'signedPreKeySignature')
+    signedPreKeySignature_node.text = __OMEMO_BUNDLE.get(u'signedPreKeySignature')
+
+    identityKey_node = ET.SubElement(bundle_node, u'identityKey')
+    identityKey_node.text = __OMEMO_BUNDLE.get(u'identityKey')
+
+    prekeys_node = ET.SubElement(bundle_node, u'prekeys')
+    for key_id, key in __OMEMO_BUNDLE.get(u'prekeys',[]):
+        key_node = ET.SubElement(prekeys_node, u'preKeyPunlic',
+                                 attrib={u'preKeyId': key_id})
+        key_node.text = key
+
+    # reconvert xml to stanza
+    bundle_stanza = ET.tostring(bundle_xml, encoding='utf8', method='xml')
+    prof.cons_show(bundle_stanza)
+    prof.send_stanza(bundle_stanza)
 
 
 def _start_omemo_session(jid):
     # should be started before the first message is sent.
+    """
+    <iq type='get'
+        from='romeo@montague.lit'
+        to='juliet@capulet.lit'
+        id='fetch1'>
+    <pubsub xmlns='http://jabber.org/protocol/pubsub'>
+        <items node='urn:xmpp:omemo:0:bundles:31415'/>
+    </pubsub>
+    </iq>
+
+    :param jid: user to start a chat with
+    """
     pass
 
 
@@ -165,7 +219,7 @@ def _end_omemo_session(jid):
 ################################################################################
 
 
-def _create_fetch_bundle_request(sender, recipient, device_id):
+def _fetch_bundle(sender, recipient, device_id):
     bundle_req_root = ET.Element('iq')
     bundle_req_root.set('from', sender)
     bundle_req_root.set('to', recipient)
@@ -173,16 +227,21 @@ def _create_fetch_bundle_request(sender, recipient, device_id):
     pubsub_node = ET.SubElement(bundle_req_root, 'pubsub')
     pubsub_node.set('xmlns', 'http://jabber.org/protocol/pubsub')
     items_node = ET.SubElement(pubsub_node, 'items')
-    items_node.set('node', 'urn:xmpp:omemo:0:bundles:{}'.format(device_id))
+    items_node.set('node', '{0}:{1}'.format(NS_BUNDLES, device_id))
 
-    return ET.tostring(bundle_req_root, encoding='utf8', method='xml')
-
+    stanza = ET.tostring(bundle_req_root, encoding='utf8', method='xml')
+    prof.send_stanza(stanza)
 
 def _stanza__get_root_attributes(stanza):
     xml = ET.fromstring(stanza)
     xml_root = xml.getroot()
 
     return xml_root.attrib
+
+
+def _handle_message_stanza(stanza):
+    # prof_incoming_message()
+    raise NotImplementedError
 
 ################################################################################
 # Sending hooks
@@ -206,8 +265,12 @@ def prof_on_iq_stanza_send(stanza):
 
 
 def prof_on_message_stanza_receive(stanza):
-    # prof_incoming_message() and return FALSE
-    return True
+    try:
+        _handle_message_stanza(stanza)
+    except Exception:
+        return True
+
+    return False
 
 
 def prof_on_presence_stanza_receive(stanza):
@@ -224,7 +287,7 @@ def prof_on_iq_stanza_receive(stanza):
 ################################################################################
 
 
-def _parse_args(*args):
+def _parse_args(arg1):
     """ Parse arguments given in command window
 
     arg1: start || end
@@ -233,7 +296,10 @@ def _parse_args(*args):
     Starts or ends an encrypted chat session
 
     """
-    pass
+    if arg1 == "announce":
+        _announce_bundle()
+    elif arg1 == "test":
+        test_send()
 
 ################################################################################
 # Plugin init
@@ -247,7 +313,8 @@ def prof_init(version, status, account_name, fulljid):
 
     synopsis = [
         "/omemo",
-        "/omemo start|end [jid]"
+        "/omemo start|end [jid]",
+        "/omemo announce"
     ]
 
     description = "Plugin to enable OMEMO encryption"
@@ -262,6 +329,9 @@ def prof_init(version, status, account_name, fulljid):
     prof.register_command("/omemo", 1, 2,
                           synopsis, description, args, examples, _parse_args)
 
-    prof.completer_add("/omemo", ["start", "end"])
+    prof.completer_add("/omemo", ["start", "end", "announce"])
 
-    _init_omemo()
+    if account_name or fulljid:
+        _init_omemo(account_name)
+    else:  # for debugging now
+        _init_omemo(u'renevolution@yakshed.org')
