@@ -3,7 +3,6 @@ import logging
 import os
 import sys
 import uuid
-from base64 import b64decode
 
 import prof
 
@@ -106,13 +105,8 @@ NS_DEVICE_LIST = NS_OMEMO + '.devicelist'
 NS_DEVICE_LIST_NOTIFY = NS_DEVICE_LIST + '+notify'
 NS_BUNDLES = NS_OMEMO + '.bundles'
 
+SETTINGS_GROUP = 'omemo'
 
-__OMEMO_ACCOUNT = None
-__OMEMO_FULLJID = None
-__OMEMO_BUNDLE = None
-__OMEMO_DEVICES = {}
-__OMEMO_STATE = None
-__REQ_INCR = {}
 
 ################################################################################
 # Convenience methods
@@ -131,7 +125,10 @@ def db():
 
 
 def _get_local_data_path():
-    current_user = __OMEMO_ACCOUNT
+    current_user, _ = get_current_user()
+    if not current_user:
+        raise RuntimeError('No User Login detected.')
+
     safe_username = current_user.replace('@', '_at_')
 
     return os.path.join(XDG_DATA_HOME, 'profanity', 'omemo', safe_username)
@@ -139,33 +136,6 @@ def _get_local_data_path():
 
 def _get_db_path():
     return os.path.join(_get_local_data_path(), 'omemo.db')
-
-
-def decode_data(data):
-    """ Fetch the data from specified node and b64decode it. """
-    if not data:
-        prof.log_warning("No node data")
-        return
-    try:
-        return b64decode(data)
-    except:
-        prof.log_warning('b64decode broken')
-        return
-
-
-def _get_request_increment(req_type):
-    global __REQ_INCR
-    last_req_id = __REQ_INCR.get(req_type)
-    if last_req_id:
-        # increment the last request id
-        req_id = last_req_id + 1
-    else:
-        # we need to set an initial request id
-        req_id = 1
-
-    __REQ_INCR[req_type] = req_id
-
-    return '{0}{1}'.format(req_type, req_id)
 
 
 def send_stanza(stanza):
@@ -231,15 +201,17 @@ def unpack_encrypted_stanza(encrypted_stanza):
 ################################################################################
 
 
-def _init_omemo(account_name, fulljid):
-    global __OMEMO_ACCOUNT
-    __OMEMO_ACCOUNT = account_name
-    global __OMEMO_FULLJID
-    __OMEMO_FULLJID = fulljid
-    global __OMEMO_STATE
-    __OMEMO_STATE = OmemoState(db())
-    global __OMEMO_BUNDLE
-    __OMEMO_BUNDLE = __OMEMO_STATE.bundle
+def get_omemo_state():
+    return OmemoState(db())
+
+
+def get_own_bundle():
+    state = get_omemo_state()
+    return state.bundle
+
+
+def _init_omemo():
+    account_name, _ = get_current_user()
 
     # subscribe to devicelist updates
     prof.log_info('Adding Disco Feature {0}.'.format(NS_DEVICE_LIST_NOTIFY))
@@ -248,7 +220,7 @@ def _init_omemo(account_name, fulljid):
     prof.log_info('Announcing own bundle info.')
     _announce_devicelist()
     _announce_bundle()
-    query_device_list(__OMEMO_ACCOUNT)
+    query_device_list(account_name)
 
 
 def test_send():
@@ -257,34 +229,6 @@ def test_send():
 
 
 def _build_bundle_dict(bundle_xml):
-    # IN
-    # < iq id = "fetch2" to = "renevolution@yakshed.org/profanity" type = "result"
-    # from="bascht@yakshed.org" > < pubsub
-    # xmlns = "http://jabber.org/protocol/pubsub" > < items
-    # node = "eu.siacs.conversations.axolotl.bundles:584672103" > < item
-    # id = "1" > < bundle
-    # xmlns = "eu.siacs.conversations.axolotl" > < signedPreKeyPublic
-    # signedPreKeyId = "201" > BfRvacDSmt9fL4f4jqktjsn + Sj0XHTOaDIrwUHrmm7UM
-    # < / signedPreKeyPublic > < signedPreKeySignature > GoFJNyUAp + +f / S65JEZqXmEp1ywW0pEhnoLRpqmSs1U5nLPDB23w9qDQ2qBoHtzzFV3rFscC0elW
-    # gfQH8QrrhA ==
-    # < / signedPreKeySignature > < identityKey > BcZ44U9DtJUYEEqqRY + a / EBifzrVam + FTEq / aBNyLRAX
-    # < / identityKey > < prekeys > < preKeyPublic
-    # preKeyId = "19951" > BUAt + pvKZuHLbPYESargxpe4s4jsEqxe5sK + xwvt + lYQ
-    # < / preKeyPublic > < preKeyPublic
-    # ...
-    # < / preKeyPublic > < / prekeys > < / bundle > < / item > < / items > < / pubsub > < / iq >
-    #
-    # OUT
-    # result = {
-    #     'signedPreKeyId': signedPreKey.getId(),
-    #     'signedPreKeyPublic':
-    #         b64encode(signedPreKey.getKeyPair().getPublicKey().serialize()),
-    #     'signedPreKeySignature': b64encode(signedPreKey.getSignature()),
-    #     'identityKey':
-    #         b64encode(identityKeyPair.getPublicKey().serialize()),
-    #     'prekeys': prekeys
-    # }
-
     prof.log_info('Unwrapping bundle info.')
 
     bundle_node = bundle_xml.find('.//{%s}bundle' % NS_OMEMO)
@@ -330,14 +274,14 @@ def _announce_bundle():
                          '</pubsub>'
                          '</iq>')
 
-    bundle_msg = announce_template.format(from_jid=__OMEMO_ACCOUNT,
+    omemo_state = get_omemo_state()
+    account_name, _ = get_current_user()
+    own_bundle = omemo_state.bundle
+    bundle_msg = announce_template.format(from_jid=account_name,
                                           req_id=str(uuid.uuid4()),
-                                          device_id=__OMEMO_STATE.own_device_id,
+                                          device_id=omemo_state.own_device_id,
                                           bundles_ns=NS_BUNDLES,
                                           omemo_ns=NS_OMEMO)
-
-    # clean bundle_msg
-    # bundle_msg = bundle_msg.replace('\n', '').replace('\r', '')
 
     bundle_xml = ET.fromstring(bundle_msg)
 
@@ -345,18 +289,18 @@ def _announce_bundle():
     find_str = './/{%s}bundle' % NS_OMEMO
     bundle_node = bundle_xml.find(find_str)
     pre_key_signed_node = ET.SubElement(bundle_node, 'signedPreKeyPublic',
-                                        attrib={'signedPreKeyId': str(__OMEMO_BUNDLE['signedPreKeyId'])})
-    pre_key_signed_node.text = __OMEMO_BUNDLE.get('signedPreKeyPublic')
+                                        attrib={'signedPreKeyId': str(own_bundle['signedPreKeyId'])})
+    pre_key_signed_node.text = own_bundle.get('signedPreKeyPublic')
 
     signedPreKeySignature_node = ET.SubElement(bundle_node,
                                                'signedPreKeySignature')
-    signedPreKeySignature_node.text = __OMEMO_BUNDLE.get('signedPreKeySignature')
+    signedPreKeySignature_node.text = own_bundle.get('signedPreKeySignature')
 
     identityKey_node = ET.SubElement(bundle_node, 'identityKey')
-    identityKey_node.text = __OMEMO_BUNDLE.get('identityKey')
+    identityKey_node.text = own_bundle.get('identityKey')
 
     prekeys_node = ET.SubElement(bundle_node, 'prekeys')
-    for key_id, key in __OMEMO_BUNDLE.get('prekeys',[]):
+    for key_id, key in own_bundle.get('prekeys',[]):
         key_node = ET.SubElement(prekeys_node, 'preKeyPublic',
                                  attrib={'preKeyId': str(key_id)})
         key_node.text = key
@@ -376,9 +320,22 @@ def _start_omemo_session(jid):
     _fetch_bundle(jid)
 
 
-def _end_omemo_session(jid):
-    # TODO: catch window_closed as well
-    pass
+def get_current_user():
+    account = prof.settings_get_string(SETTINGS_GROUP, 'account', None)
+    fulljid = prof.settings_get_string(SETTINGS_GROUP, 'fulljid', None)
+
+    return account, fulljid
+
+
+def set_current_user(account_name, fulljid):
+    prof.settings_string_set(SETTINGS_GROUP, 'account', account_name)
+    prof.settings_string_set(SETTINGS_GROUP, 'fulljid', fulljid)
+
+
+def clear_current_user():
+    prof.settings_string_set(SETTINGS_GROUP, 'account', None)
+    prof.settings_string_set(SETTINGS_GROUP, 'fulljid', None)
+
 
 ################################################################################
 # Error Handling
@@ -398,14 +355,15 @@ class UnhandledOmemoMessage(Exception):
 
 
 def _fetch_bundle(recipient):
-
-    recipient_devices = __OMEMO_STATE.device_list_for(recipient)
+    omemo_state = get_omemo_state()
+    account_name, _ = get_current_user()
+    recipient_devices = omemo_state.device_list_for(recipient)
     prof.log_info('Fetching bundle for devices {0} of {1}'.format(recipient_devices, recipient))
 
     for device_id in recipient_devices:
         bundle_req_root = ET.Element('iq')
         bundle_req_root.set('type', 'get')
-        bundle_req_root.set('from', __OMEMO_ACCOUNT)
+        bundle_req_root.set('from', account_name)
         bundle_req_root.set('to', recipient)
         bundle_req_root.set('id', str(uuid.uuid4()))
         pubsub_node = ET.SubElement(bundle_req_root, 'pubsub')
@@ -448,6 +406,7 @@ def _handle_devicelist_update(stanza):
            id="584672103"/></list></item></items></event></message>
 
     """
+    omemo_state = get_omemo_state()
     xml = ET.fromstring(stanza)
 
     try:
@@ -475,8 +434,7 @@ def _handle_devicelist_update(stanza):
         prof.log_info('Adding Device ID\'s: {0} for {1}.'.format(device_ids,
                                                                  sender_jid))
 
-        global __OMEMO_STATE
-        __OMEMO_STATE.add_devices(sender_jid, device_ids)
+        omemo_state.add_devices(sender_jid, device_ids)
 
         prof.log_info('Device List update done.')
 
@@ -490,6 +448,7 @@ def add_recipient_to_completer(recipient):
 
 def _handle_bundle_update(stanza):
     prof.log_info('Bundle Information received.')
+    omemo_state = get_omemo_state()
     bundle_xml = ET.fromstring(stanza)
     bundle_info = _build_bundle_dict(bundle_xml)
     sender = bundle_xml.attrib['from'].rsplit('/', 1)[0]
@@ -497,8 +456,11 @@ def _handle_bundle_update(stanza):
     items_node = bundle_xml.find(
         './/{%s}items' % 'http://jabber.org/protocol/pubsub')
     device_id = items_node.attrib['node'].split(':')[-1]
-    global __OMEMO_STATE
-    session_cipher = __OMEMO_STATE.build_session(sender, device_id, bundle_info)
+    try:
+        omemo_state.build_session(sender, device_id, bundle_info)
+    except Exception as e:
+        msg = 'Could not build session with {0}:{1}. {2}:{3} '
+        prof.log_error(msg.format(sender, device_id, type(e), str(e)))
 
     prof.log_info('Session built with user: {0} '.format(sender))
 
@@ -521,9 +483,12 @@ def _announce_devicelist():
                  '</pubsub>'
                  '</iq>')
 
-    device_nodes = ['<device id="{0}"/>'.format(d) for d in [__OMEMO_STATE.own_device_id]]
+    omemo_state = get_omemo_state()
+    _, fulljid = get_current_user()
+    # TODO: This looks weird - there could be more than one device id
+    device_nodes = ['<device id="{0}"/>'.format(d) for d in [omemo_state.own_device_id]]
 
-    msg_dict = {'from': __OMEMO_FULLJID,
+    msg_dict = {'from': fulljid,
                 'devices': ''.join(device_nodes),
                 'id': str(uuid.uuid4()),
                 'omemo_ns': NS_OMEMO,
@@ -544,7 +509,8 @@ def query_device_list(contact_jid):
                  '</pubsub>'
                  '</iq>')
 
-    msg_dict = {'from': __OMEMO_FULLJID,
+    _, fulljid = get_current_user()
+    msg_dict = {'from': fulljid,
                 'to': contact_jid,
                 'id': str(uuid.uuid4()),
                 'device_list_ns': NS_DEVICE_LIST}
@@ -556,15 +522,15 @@ def query_device_list(contact_jid):
 
 
 def encrypted_from_stanza(stanza):
+    _, fulljid = get_current_user()
     msg_xml = ET.fromstring(stanza)
-    from_jid = __OMEMO_FULLJID
     jid = msg_xml.attrib['to']
     raw_jid = jid.rsplit('/', 1)[0]
 
     body_node = msg_xml.find('.//body')
     plaintext = body_node.text
 
-    return encrypted(from_jid, raw_jid, plaintext)
+    return encrypted(fulljid, raw_jid, plaintext)
 
 
 def encrypted(from_jid, to_jid, plaintext):
@@ -580,14 +546,13 @@ def encrypted(from_jid, to_jid, plaintext):
                  '<store xmlns="urn:xmpp:hints"/>'
                  '</message>')
 
-    prof.log_info('Get Message Data >> FROM: {0} >> TO: {1} >> MSG: {2}'.format(from_jid, to_jid, plaintext))
-    msg_dict = __OMEMO_STATE.create_msg(from_jid, to_jid, plaintext)
+    omemo_state = get_omemo_state()
+    msg_dict = omemo_state.create_msg(from_jid, to_jid, plaintext)
 
     # build encrypted message from here
+    keys_tpl = '<key rid="{0}">{1}</key>'
     keys_dict = msg_dict['keys']
-    keys_str = ''.join(
-        ['<key rid="{0}">{1}</key>'.format(rid, key) for rid, key in
-         keys_dict.iteritems()])
+    keys_str = ''.join([keys_tpl.format(rid, key) for rid, key in keys_dict.iteritems()])
 
     msg_dict = {'to': to_jid,
                 'from': from_jid,
@@ -637,13 +602,6 @@ def prof_on_message_stanza_receive(stanza):
            xmlns="eu.siacs.conversations.axolotl"><device id="259621345"/><device
            id="584672103"/></list></item></items></event></message> """
 
-
-    # try:
-    #     _handle_message_stanza(stanza)
-    # except Exception:
-    #     return True
-    #
-    # return False
     prof.log_info('Received Message: {0}'.format(stanza))
     if NS_DEVICE_LIST in stanza:
         prof.log_info('Device List update detected.')
@@ -651,6 +609,8 @@ def prof_on_message_stanza_receive(stanza):
         return False
 
     if 'encrypted' in stanza:
+        # TODO: check in NS_OMEMO only
+        omemo_state = get_omemo_state()
         xml = ET.fromstring(stanza)
         sender_fulljid = xml.attrib['from']
         sender, resource = sender_fulljid.rsplit('/', 1)
@@ -658,7 +618,7 @@ def prof_on_message_stanza_receive(stanza):
             msg_dict = unpack_encrypted_stanza(stanza)
             msg_dict['sender_jid'] = sender
 
-            plain_msg = __OMEMO_STATE.decrypt_msg(msg_dict)
+            plain_msg = omemo_state.decrypt_msg(msg_dict)
             prof.log_info('Received Plain Message: {}'.format(plain_msg))
             if plain_msg:
                 prefixed_msg = '[*OMEMO*] {}'.format(plain_msg)
@@ -700,11 +660,6 @@ def prof_on_iq_stanza_receive(stanza):
 ################################################################################
 
 
-def _handle_win_input(recipient, msg):
-    prof.log_info('Win Input: {0} - {1}'.format(recipient, msg))
-    send_stanza(encrypted(__OMEMO_ACCOUNT, recipient, msg))
-
-
 def _parse_args(arg1=None, arg2=None):
     """ Parse arguments given in command window
 
@@ -714,6 +669,8 @@ def _parse_args(arg1=None, arg2=None):
     Starts or ends an encrypted chat session
 
     """
+    account_name, fulljid = get_current_user()
+
     if arg1 == "announce":
         _announce_bundle()
     elif arg1 == "start" :
@@ -728,21 +685,20 @@ def _parse_args(arg1=None, arg2=None):
             _start_omemo_session(muc)
 
     elif arg1 == "account":
-        prof.cons_show('Account: {0}'.format(__OMEMO_ACCOUNT))
-    elif arg1 == "device":
-        prof.cons_show('Device-ID: {0}'.format(__OMEMO_STATE.own_device_id))
+        prof.cons_show('Account: {0}'.format(account_name))
     elif arg1 == "fulljid":
-        prof.cons_show('Current JID: {0}'.format(__OMEMO_FULLJID))
+        prof.cons_show('Current JID: {0}'.format(fulljid))
     elif arg1 == "show_devices" and arg2 is not None:
+        omemo_state = get_omemo_state()
         prof.cons_show('Requesting Devices...')
-        devices = __OMEMO_STATE.device_list_for(arg2)
+        devices = omemo_state.device_list_for(arg2)
         prof.cons_show('Devices: {0}'.format(devices))
         prof.cons_show('{0}: {1}'.format(arg2, ', '.join(devices)))
     elif arg1 == "test":
         test_send()
 
 ################################################################################
-# Plugin init
+# Plugin State Changes
 ################################################################################
 
 
@@ -773,7 +729,25 @@ def prof_init(version, status, account_name, fulljid):
 
     prof.completer_add("/omemo", ["start", "end", "announce", "account", "fulljid", "show_devices"])
 
+    if account_name and fulljid:
+        set_current_user(account_name, fulljid)
+        _init_omemo()
+
+
+def prof_on_shutdown():
+    clear_current_user()
+
+
+def prof_on_unload():
+    clear_current_user()
+
 
 def prof_on_connect(account_name, fulljid):
     prof.log_info('Initializing Profanity OMEMO Plugin...')
-    _init_omemo(account_name, fulljid)
+    set_current_user(account_name, fulljid)
+    _init_omemo()
+
+
+def prof_on_disconnect(account_name, fulljid):
+    clear_current_user()
+
