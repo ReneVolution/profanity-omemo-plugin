@@ -106,7 +106,10 @@ NS_DEVICE_LIST_NOTIFY = NS_DEVICE_LIST + '+notify'
 NS_BUNDLES = NS_OMEMO + '.bundles'
 
 SETTINGS_GROUP = 'omemo'
+NULL_STRING = 'null'
 
+OMEMO_CURRENT_ACCOUNT = None
+OMEMO_CURRENT_FULLJID = None
 
 ################################################################################
 # Convenience methods
@@ -126,7 +129,7 @@ def db():
 
 def _get_local_data_path():
     current_user, _ = get_current_user()
-    if not current_user:
+    if current_user in [None, NULL_STRING]:
         raise RuntimeError('No User Login detected.')
 
     safe_username = current_user.replace('@', '_at_')
@@ -203,11 +206,6 @@ def unpack_encrypted_stanza(encrypted_stanza):
 
 def get_omemo_state():
     return OmemoState(db())
-
-
-def get_own_bundle():
-    state = get_omemo_state()
-    return state.bundle
 
 
 def _init_omemo():
@@ -321,20 +319,19 @@ def _start_omemo_session(jid):
 
 
 def get_current_user():
-    account = prof.settings_get_string(SETTINGS_GROUP, 'account', None)
-    fulljid = prof.settings_get_string(SETTINGS_GROUP, 'fulljid', None)
-
-    return account, fulljid
+    return OMEMO_CURRENT_ACCOUNT, OMEMO_CURRENT_FULLJID
 
 
 def set_current_user(account_name, fulljid):
-    prof.settings_string_set(SETTINGS_GROUP, 'account', account_name)
-    prof.settings_string_set(SETTINGS_GROUP, 'fulljid', fulljid)
+    global OMEMO_CURRENT_ACCOUNT, OMEMO_CURRENT_FULLJID
+    OMEMO_CURRENT_ACCOUNT = account_name
+    OMEMO_CURRENT_FULLJID = fulljid
 
 
 def clear_current_user():
-    prof.settings_string_set(SETTINGS_GROUP, 'account', None)
-    prof.settings_string_set(SETTINGS_GROUP, 'fulljid', None)
+    global OMEMO_CURRENT_ACCOUNT, OMEMO_CURRENT_FULLJID
+    OMEMO_CURRENT_ACCOUNT = None
+    OMEMO_CURRENT_FULLJID = None
 
 
 ################################################################################
@@ -729,9 +726,12 @@ def prof_init(version, status, account_name, fulljid):
 
     prof.completer_add("/omemo", ["start", "end", "announce", "account", "fulljid", "show_devices"])
 
+    # set user and init omemo only if account_name and fulljid provided
     if account_name and fulljid:
         set_current_user(account_name, fulljid)
         _init_omemo()
+    else:
+        prof.log_warning('No User logged in on plugin.prof_init()')
 
 
 def prof_on_shutdown():
@@ -739,7 +739,8 @@ def prof_on_shutdown():
 
 
 def prof_on_unload():
-    clear_current_user()
+    # clear_current_user()
+    pass
 
 
 def prof_on_connect(account_name, fulljid):
