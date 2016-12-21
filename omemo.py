@@ -105,11 +105,14 @@ NS_DEVICE_LIST = NS_OMEMO + '.devicelist'
 NS_DEVICE_LIST_NOTIFY = NS_DEVICE_LIST + '+notify'
 NS_BUNDLES = NS_OMEMO + '.bundles'
 
-SETTINGS_GROUP = 'omemo'
-NULL_STRING = 'null'
-
+# Global state vars
 OMEMO_CURRENT_ACCOUNT = None
 OMEMO_CURRENT_FULLJID = None
+OMEMO_CURRENT_STATE = None
+
+# Constants
+SETTINGS_GROUP = 'omemo'
+
 
 ################################################################################
 # Convenience methods
@@ -129,7 +132,7 @@ def db():
 
 def _get_local_data_path():
     current_user, _ = get_current_user()
-    if current_user in [None, NULL_STRING]:
+    if not current_user:
         raise RuntimeError('No User Login detected.')
 
     safe_username = current_user.replace('@', '_at_')
@@ -205,20 +208,26 @@ def unpack_encrypted_stanza(encrypted_stanza):
 
 
 def get_omemo_state():
-    return OmemoState(db())
+    global OMEMO_CURRENT_STATE
+
+    if not OMEMO_CURRENT_STATE:
+        prof.log_info('Initializing OMEMO state.')
+        OMEMO_CURRENT_STATE = OmemoState(db())
+
+    return OMEMO_CURRENT_STATE
 
 
 def _init_omemo():
     account_name, _ = get_current_user()
+    if account_name:
+        # subscribe to devicelist updates
+        prof.log_info('Adding Disco Feature {0}.'.format(NS_DEVICE_LIST_NOTIFY))
+        prof.disco_add_feature(NS_DEVICE_LIST_NOTIFY)
 
-    # subscribe to devicelist updates
-    prof.log_info('Adding Disco Feature {0}.'.format(NS_DEVICE_LIST_NOTIFY))
-    prof.disco_add_feature(NS_DEVICE_LIST_NOTIFY)
-
-    prof.log_info('Announcing own bundle info.')
-    _announce_devicelist()
-    _announce_bundle()
-    query_device_list(account_name)
+        prof.log_info('Announcing own bundle info.')
+        _announce_devicelist()
+        _announce_bundle()
+        query_device_list(account_name)
 
 
 def test_send():
@@ -319,17 +328,32 @@ def _start_omemo_session(jid):
 
 
 def get_current_user():
+    global OMEMO_CURRENT_ACCOUNT
+    global OMEMO_CURRENT_FULLJID
+    prof.log_info(('Get current user account. '
+                   'Account Name: {0}, '
+                   'Full-JID: {0}').format(OMEMO_CURRENT_ACCOUNT,
+                                           OMEMO_CURRENT_FULLJID))
+
     return OMEMO_CURRENT_ACCOUNT, OMEMO_CURRENT_FULLJID
 
 
 def set_current_user(account_name, fulljid):
-    global OMEMO_CURRENT_ACCOUNT, OMEMO_CURRENT_FULLJID
+    prof.log_info(('Set current user account. '
+                   'Account Name: {0}, '
+                   'Full-JID: {0}').format(account_name, fulljid))
+    global OMEMO_CURRENT_ACCOUNT
+    global OMEMO_CURRENT_FULLJID
+
     OMEMO_CURRENT_ACCOUNT = account_name
     OMEMO_CURRENT_FULLJID = fulljid
 
 
 def clear_current_user():
-    global OMEMO_CURRENT_ACCOUNT, OMEMO_CURRENT_FULLJID
+    prof.log_info('Clearing current user account.')
+    global OMEMO_CURRENT_ACCOUNT
+    global OMEMO_CURRENT_FULLJID
+
     OMEMO_CURRENT_ACCOUNT = None
     OMEMO_CURRENT_FULLJID = None
 
@@ -404,6 +428,9 @@ def _handle_devicelist_update(stanza):
 
     """
     omemo_state = get_omemo_state()
+    if not omemo_state:
+        return
+
     xml = ET.fromstring(stanza)
 
     try:
@@ -460,10 +487,6 @@ def _handle_bundle_update(stanza):
         prof.log_error(msg.format(sender, device_id, type(e), str(e)))
 
     prof.log_info('Session built with user: {0} '.format(sender))
-
-
-def _handle_omemo_message(encrypted_node):
-    pass
 
 
 def _announce_devicelist():
@@ -700,7 +723,7 @@ def _parse_args(arg1=None, arg2=None):
 
 
 def prof_init(version, status, account_name, fulljid):
-
+    prof.log_info('prof_init() called')
     synopsis = [
         "/omemo",
         "/omemo start|end [jid]",
@@ -727,28 +750,35 @@ def prof_init(version, status, account_name, fulljid):
     prof.completer_add("/omemo", ["start", "end", "announce", "account", "fulljid", "show_devices"])
 
     # set user and init omemo only if account_name and fulljid provided
-    if account_name and fulljid:
+    prof.log_info(account_name)
+    prof.log_info(fulljid)
+    if account_name is not None and fulljid is not None:
         set_current_user(account_name, fulljid)
         _init_omemo()
     else:
         prof.log_warning('No User logged in on plugin.prof_init()')
 
 
-def prof_on_shutdown():
-    clear_current_user()
-
-
 def prof_on_unload():
-    # clear_current_user()
-    pass
+    prof.log_info('prof_on_unload() called')
+    clear_current_user()
+    global OMEMO_CURRENT_STATE
+    OMEMO_CURRENT_STATE = None
 
 
 def prof_on_connect(account_name, fulljid):
-    prof.log_info('Initializing Profanity OMEMO Plugin...')
+    prof.log_info('prof_on_connect() called')
     set_current_user(account_name, fulljid)
     _init_omemo()
 
 
 def prof_on_disconnect(account_name, fulljid):
+    prof.log_info('prof_on_disconnect() called')
     clear_current_user()
+    global OMEMO_CURRENT_STATE
+    OMEMO_CURRENT_STATE = None
 
+
+def prof_on_shutdown():
+    prof.log_info('prof_on_shutdown() called')
+    clear_current_user()
