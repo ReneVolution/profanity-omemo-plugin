@@ -1,54 +1,21 @@
 # -*- coding: utf-8 -*-
-import logging
+
+# This file will be copied to the profanity plugins install location
 import os
 import uuid
 
+import profanity_omemo_plugin as omemo_plugin
+from profanity_omemo_plugin.log import get_logger
+from profanity_omemo_plugin.db import get_connection
 import prof
 
 
-class ProfLogHandler(logging.Handler):
-
-    def __init__(self):
-        super(ProfLogHandler, self).__init__()
-
-    def emit(self, record):
-
-        level_fn_map = {
-            10: prof.log_debug,  # DEBUG
-            20: prof.log_info,  # INFO
-            30: prof.log_warning,  # WARNING
-            40: prof.log_error  # ERROR
-        }
-
-        try:
-            msg = u'{0}: {1}'.format(record.name, record.msg)
-            level_fn_map[record.levelno](msg)
-        except:
-            prof.log_error('Could not log last message.')
-
-python_omemo_logger = logging.getLogger('omemo')
-python_omemo_logger.setLevel(logging.DEBUG)
-python_omemo_logger.addHandler(ProfLogHandler())
-
-
-def get_logger(name):
-    logger = logging.getLogger(name)
-    logger.addHandler(ProfLogHandler())
-
-    return logger
-
-log = get_logger('OmemoPlugin')
+log = omemo_plugin.log.get_logger()
 
 # PyCharm remote debugger include
 # import sys
 # sys.path.append('/usr/local/pycharm-2016.3.1/debug-eggs/pycharm-debug.egg')
 # sys.path.append('/Applications/PyCharm.app/Contents/debug-eggs/pycharm-debug.egg')
-
-try:
-    import sqlite3
-except ImportError:
-    prof.log_error('Could not import sqlite3')
-    raise
 
 try:
     from lxml import etree as ET
@@ -62,10 +29,6 @@ except ImportError:
     prof.log_error('Could not import OmemoState')
     raise
 
-
-HOME = os.path.expanduser("~")
-XDG_DATA_HOME = os.environ.get("XDG_DATA_HOME",
-                               os.path.join(HOME, ".local", "share"))
 
 # OMEMO static namespace vars
 NS_OMEMO = 'eu.siacs.conversations.axolotl'
@@ -85,32 +48,6 @@ SETTINGS_GROUP = 'omemo'
 ################################################################################
 # Convenience methods
 ################################################################################
-
-
-def db():
-    """ Open in memory sqlite db and create a table. """
-    db_path = _get_db_path()
-    db_root = os.path.dirname(db_path)
-    if not os.path.isdir(db_root):
-        os.makedirs(db_root)
-    prof.log_info('Using database path {}'.format(db_path))
-    conn = sqlite3.connect(db_path, check_same_thread=False)
-    return conn
-
-
-def _get_local_data_path():
-    current_user, _ = get_current_user()
-    if not current_user:
-        raise RuntimeError('No User Login detected.')
-
-    safe_username = current_user.replace('@', '_at_')
-
-    return os.path.join(XDG_DATA_HOME, 'profanity', 'omemo', safe_username)
-
-
-def _get_db_path():
-    return os.path.join(_get_local_data_path(), 'omemo.db')
-
 
 def stanza_is_valid_xml(stanza):
     """ Validates a given stanza to be valid xml"""
@@ -187,7 +124,8 @@ def get_omemo_state():
 
     if not OMEMO_CURRENT_STATE:
         prof.log_info('Initializing OMEMO state.')
-        OMEMO_CURRENT_STATE = OmemoState(OMEMO_CURRENT_ACCOUNT, db())
+        connection = get_connection(OMEMO_CURRENT_ACCOUNT)
+        OMEMO_CURRENT_STATE = OmemoState(OMEMO_CURRENT_ACCOUNT, connection)
 
     return OMEMO_CURRENT_STATE
 
