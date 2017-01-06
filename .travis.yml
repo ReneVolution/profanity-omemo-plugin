@@ -5,12 +5,12 @@ python:
 
 # command to install dependencies
 install:
-  - python setup.py -q install
-  - pip install pytest
+  - pip install tox-travis
   - pip install coveralls
 
 # command to run tests
-script: coverage run --source=profanity_omemo_plugin py.test -v --color=yes
+script:
+  - tox
 
 after_success:
-  coveralls
+  - coveralls
