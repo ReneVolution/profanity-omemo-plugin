@@ -1,5 +1,5 @@
 # Include the license file
-include LICENSE
+include README.md LICENSE
 
 # Include the actual plugin file
 recursive-include deploy *
