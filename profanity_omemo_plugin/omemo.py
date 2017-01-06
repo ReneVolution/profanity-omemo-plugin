@@ -1,24 +1,49 @@
+from db import get_connection
+from log import get_plugin_logger
+
+logger = get_plugin_logger()
+
 try:
     from omemo.state import OmemoState
 except ImportError:
-    prof.log_error('Could not import OmemoState')
+    logger.error('Could not import OmemoState')
     raise
 
-from db import get_connection
-from log import get_logger
 
-# TODO: Use proper Singleton Pattern
-OMEMO_CURRENT_STATE = None
+class ProfOmemoState(object):
+    """ ProfOmemoState Singleton """
 
-logger = get_logger()
+    __states = {}
+
+    def __new__(cls, *args, **kwargs):
+        current_account = ProfOmemoUser().account
+        if not current_account:
+            raise RuntimeError('No User connected.')
+
+        if current_account not in cls.__states:
+            # create the OmemoState for the current user
+            connection = get_connection(current_account)
+            new_state = OmemoState(current_account, connection)
+            cls.__states[current_account] = new_state
+
+        return cls.__states[current_account]
 
 
-def get_omemo_state(account):
-    global OMEMO_CURRENT_STATE
+class ProfOmemoUser(object):
+    """ ProfOmemoUser Singleton """
 
-    if not OMEMO_CURRENT_STATE:
-        logger.info('Initializing OMEMO state.')
-        connection = get_connection(account)
-        OMEMO_CURRENT_STATE = OmemoState(account, connection)
+    account = None
+    fulljid = None
 
-    return OMEMO_CURRENT_STATE
+    @classmethod
+    def set_user(cls, account, fulljid):
+        cls.account = account
+        cls.fulljid = fulljid
+
+    @classmethod
+    def reset(cls):
+        cls.account = None
+        cls.fulljid = None
+
+    def __repr__(self):
+        return '{0} <{1}>'.format(self.account, self.fulljid)

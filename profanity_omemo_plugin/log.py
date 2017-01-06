@@ -35,7 +35,7 @@ python_omemo_logger.setLevel(logging.DEBUG)
 python_omemo_logger.addHandler(ProfLogHandler())
 
 
-def get_logger():
+def get_plugin_logger():
     logger = logging.getLogger(LOGGER_NAME)
     logger.addHandler(ProfLogHandler())
 

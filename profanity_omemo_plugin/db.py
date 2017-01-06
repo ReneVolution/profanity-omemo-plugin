@@ -1,7 +1,7 @@
 import os
-from log import get_logger
+from log import get_plugin_logger
 from constants import XDG_DATA_HOME
-log = get_logger()
+log = get_plugin_logger()
 
 try:
     import sqlite3
