@@ -1,5 +1,6 @@
 
 [![Build Status](https://travis-ci.org/ReneVolution/profanity-omemo-plugin.svg?branch=master)](https://travis-ci.org/ReneVolution/profanity-omemo-plugin)
+[![Coverage Status](https://coveralls.io/repos/github/ReneVolution/profanity-omemo-plugin/badge.svg?branch=master)](https://coveralls.io/github/ReneVolution/profanity-omemo-plugin?branch=master)
 
 # profanity-omemo-plugin 
 
