@@ -5,8 +5,12 @@ python:
 
 # command to install dependencies
 install:
-  - pip install pytest
   - python setup.py -q install
+  - pip install pytest
+  - pip install coveralls
 
 # command to run tests
-script: py.test -v --color=yes
+script: coverage run --source=profanity_omemo_plugin py.test -v --color=yes
+
+after_success:
+  coveralls
