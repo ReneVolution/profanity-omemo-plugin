@@ -9,4 +9,4 @@ install:
   - python setup.py -q install
 
 # command to run tests
-script: pytest
+script: py.test -v --color=yes
