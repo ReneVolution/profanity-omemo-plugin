@@ -67,7 +67,7 @@ setup(
     data_files=[('profanity_omemo_plugin', ['deploy/prof_omemo_plugin.py'])],
     install_requires=['python-omemo'],
     tests_require=['pytest'],
-    dependency_links=['git+https://github.com/omemo/python-omemo.git@158b0a236d93b10d9c3b7ecea6c53254967f7b01#egg=python-omemo-0'],  # noqa
+    dependency_links=['git+https://github.com/omemo/python-omemo.git@158b0a236d93b10d9c3b7ecea6c53254967f7b01#egg=python-omemo'],  # noqa
 
     # Extend the install command with a post_install command
     cmdclass={'install': CustomInstallCommand, 'test': PyTest},
