@@ -1,4 +1,5 @@
 import logging
+
 from constants import LOGGER_NAME
 
 PROFANITY_IS_HOST = True
@@ -10,10 +11,6 @@ except ImportError:
 
 
 class ProfLogHandler(logging.Handler):
-
-    def __init__(self):
-        super(ProfLogHandler, self).__init__()
-
     def emit(self, record):
 
         if PROFANITY_IS_HOST:
