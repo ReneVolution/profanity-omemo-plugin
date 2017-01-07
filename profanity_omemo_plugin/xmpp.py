@@ -1,8 +1,8 @@
 import uuid
 
 from constants import NS_OMEMO, NS_DEVICE_LIST, NS_DEVICE_LIST_NOTIFY, NS_BUNDLES
-from omemo import ProfOmemoState
 from log import get_plugin_logger
+from prof_omemo_state import ProfOmemoState
 
 try:
     from lxml import etree as ET
@@ -132,15 +132,6 @@ def unpack_encrypted_stanza(encrypted_stanza):
     <markable xmlns="urn:xmpp:chat-markers:0"/>
     <store xmlns="urn:xmpp:hints"/></message>
 
-    <message to="renevolution@yakshed.org/profanity" type="headline"
-           from="bascht@yakshed.org"><event
-           xmlns="http://jabber.org/protocol/pubsub#event"><items
-           node="eu.siacs.conversations.axolotl.devicelist"><item id="1"><list
-           xmlns="eu.siacs.conversations.axolotl"><device id="259621345"/><device
-           id="584672103"/></list></item></items></event></message>
-
-
-
     :param encrypted_stanza:
     :return:
     """
@@ -178,36 +169,6 @@ def unpack_encrypted_stanza(encrypted_stanza):
 
 
 def unpack_devicelist_info(stanza):
-    """
-    <message from='juliet@capulet.lit'
-        to='romeo@montague.lit'
-        type='headline'
-        id='update_01'>
-        <event xmlns='http://jabber.org/protocol/pubsub#event'>
-            <items node='urn:xmpp:omemo:0:devicelist'>
-            <item>
-                <list xmlns='urn:xmpp:omemo:0'>
-                <device id='12345' />
-                <device id='4223' />
-                </list>
-            </item>
-            </items>
-        </event>
-    </message>
-
-
-
-    NS_DEVICELIST
-    <message to="renevolution@yakshed.org/profanity"
-           type="headline" from="bascht@yakshed.org"><event
-           xmlns="http://jabber.org/protocol/pubsub#event"><items
-           node="eu.siacs.conversations.axolotl.devicelist"><item
-           id="1"><list
-           xmlns="eu.siacs.conversations.axolotl"><device
-           id="259621345"/><device
-           id="584672103"/></list></item></items></event></message>
-
-    """
     xml = ET.fromstring(stanza)
 
     try:
