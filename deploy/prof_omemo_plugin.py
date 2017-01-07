@@ -78,9 +78,10 @@ def _fetch_bundle(recipient):
 def _handle_devicelist_update(stanza):
     account = ProfOmemoUser().account
     msg_dict = xmpp.unpack_devicelist_info(stanza)
-    xmpp.update_devicelist(account, msg_dict['sender'], msg_dict['devices'])
+    sender_jid = msg_dict['from']
+    xmpp.update_devicelist(account, sender_jid, msg_dict['devices'])
 
-    add_recipient_to_completer(msg_dict['sender'])
+    add_recipient_to_completer(sender_jid)
 
 
 def add_recipient_to_completer(recipient):
