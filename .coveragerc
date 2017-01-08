@@ -1,0 +1,12 @@
+[paths]
+source = profanity_omemo_plugin
+
+[run]
+branch = True
+source = profanity_omemo_plugin
+parallel = true
+
+[report]
+show_missing = true
+precision = 2
+omit = *migrations*
