@@ -11,6 +11,12 @@ except ImportError:
 
 
 class ProfLogHandler(logging.Handler):
+
+    def __init__(self):
+        super(ProfLogHandler, self).__init__()
+        self.prof_formatter = logging.Formatter('%(name)s - %(message)s')
+        self.setFormatter(self.prof_formatter)
+
     def emit(self, record):
 
         if PROFANITY_IS_HOST:
@@ -22,10 +28,9 @@ class ProfLogHandler(logging.Handler):
             }
 
             try:
-                msg = u'{0}: {1}'.format(record.name, record.msg)
-                level_fn_map[record.levelno](msg)
-            except:
-                prof.log_error('Could not log last message.')
+                level_fn_map[record.levelno](self.format(record))
+            except Exception as e:
+                prof.log_error('Could not log last message. {0}'.format(str(e)))
 
 python_omemo_logger = logging.getLogger('omemo')
 python_omemo_logger.setLevel(logging.DEBUG)
