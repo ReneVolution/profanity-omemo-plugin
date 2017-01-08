@@ -1,5 +1,8 @@
 from codecs import open
+from glob import glob
 from os import path
+from os.path import basename
+from os.path import splitext
 
 from setuptools import setup, find_packages
 from setuptools.command.install import install
@@ -50,6 +53,9 @@ setup(
     keywords='omemo encryption messaging profanity xmpp jabber',
     packages=find_packages('src'),
     package_dir={'': 'src'},
+    py_modules=[splitext(basename(path))[0] for path in glob('src/*.py')],
+    include_package_data=True,
+    zip_safe=False,
     data_files=[('profanity_omemo_plugin', ['deploy/prof_omemo_plugin.py'])],
     install_requires=['python-omemo==0.1.0'],
     setup_requires=['pytest-runner'],
