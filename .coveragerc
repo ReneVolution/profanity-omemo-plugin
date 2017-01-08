@@ -1,9 +1,9 @@
 [paths]
-source = profanity_omemo_plugin
+source = src
 
 [run]
 branch = True
-source = profanity_omemo_plugin
+source = src
 parallel = true
 
 [report]
