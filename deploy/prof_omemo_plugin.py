@@ -28,6 +28,9 @@ def send_stanza(stanza):
     if xmpp.stanza_is_valid_xml(stanza):
         logger.debug('Sending Stanza: {}'.format(stanza))
         prof.send_stanza(stanza)
+        return True
+
+    return False
 
 
 ################################################################################
@@ -126,7 +129,7 @@ def _query_device_list(contact_jid):
 
 
 def prof_on_message_stanza_send(stanza):
-    if 'body' in stanza:
+    if xmpp.is_xmpp_message(stanza):
         encrypted_stanza = xmpp.encrypt_stanza(stanza)
         if xmpp.stanza_is_valid_xml(encrypted_stanza):
             return encrypted_stanza

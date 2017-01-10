@@ -1,8 +1,9 @@
 import sqlite3
 
-import profanity_omemo_plugin.xmpp as xmpp
 import pytest
 from mock import patch
+
+import profanity_omemo_plugin.xmpp as xmpp
 from profanity_omemo_plugin.constants import NS_DEVICE_LIST, NS_OMEMO
 from profanity_omemo_plugin.prof_omemo_state import ProfOmemoUser, \
     ProfOmemoState
@@ -22,7 +23,6 @@ class TestUnpackingXMPP(object):
 
     @patch('profanity_omemo_plugin.db.get_connection')
     def test_unpack_devicelist_update(self, mockdb):
-        print "Within test print"
         mockdb.return_value = get_test_db_connection()
         test_stanza = (
             '<message from="juliet@capulet.lit" to="romeo@montague.lit" type="headline" id="update_01">'

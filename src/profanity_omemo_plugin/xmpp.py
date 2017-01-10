@@ -73,6 +73,11 @@ def is_encrypted_message(stanza):
     return 'encrypted' in stanza
 
 
+def is_xmpp_message(stanza):
+    stanza = stanza or ''
+    is_valid = all([NS_OMEMO in stanza, 'body' in stanza])
+    return is_valid
+
 ################################################################################
 # Unwrapping XMPP stanzas
 ################################################################################
