@@ -6,11 +6,11 @@
 
 # This file will be copied to the profanity plugins install location
 import prof
+
 import profanity_omemo_plugin.xmpp as xmpp
 from profanity_omemo_plugin.constants import NS_DEVICE_LIST_NOTIFY
 from profanity_omemo_plugin.log import get_plugin_logger
-
-from src.profanity_omemo_plugin.prof_omemo_state import ProfOmemoState, ProfOmemoUser
+from profanity_omemo_plugin.prof_omemo_state import ProfOmemoState, ProfOmemoUser
 
 logger = get_plugin_logger()
 
@@ -155,9 +155,9 @@ def prof_on_message_stanza_receive(stanza):
             resource = msg_dict['sender_resource']
 
             plain_msg = omemo_state.decrypt_msg(msg_dict)
-            logger.info('Received Plain Message: {}'.format(plain_msg))
+            logger.info(u'Received Plain Message: {}'.format(plain_msg))
             if plain_msg:
-                prefixed_msg = '[*OMEMO*] {}'.format(plain_msg)
+                prefixed_msg = u'[*OMEMO*] {}'.format(plain_msg)
                 prof.incoming_message(sender, resource, prefixed_msg)
             return False
         except Exception as e:
