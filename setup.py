@@ -60,7 +60,7 @@ setup(
     install_requires=['python-omemo==0.1.0'],
     setup_requires=['pytest-runner'],
     tests_require=['pytest', 'mock'],
-    dependency_links=['git+https://github.com/omemo/python-omemo.git@158b0a236d93b10d9c3b7ecea6c53254967f7b01#egg=python-omemo-0.1.0'],  # noqa
+    dependency_links=['git+https://github.com/omemo/python-omemo.git@66f1814978ddc13c86fc3f5681c57449e1c01cf2#egg=python-omemo-0.1.0'],  # noqa
 
     # Extend the install command with a post_install command
     cmdclass={'install': CustomInstallCommand},
