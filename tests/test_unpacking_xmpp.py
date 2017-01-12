@@ -76,15 +76,17 @@ class TestUnpackingXMPP(object):
 
         msg_stanza = (
             '<message id="msg1" to="juliet@capulet.lit" type="chat" from="romeo@montague.lit/profanity">'
-                '<encrypted xmlns="{0}">'
-                    '<header sid="1461841909">'
-                        '<key rid="1260459496">dummy</key>'
-                        '<iv>PnZsChVPjwI6jTL6fpkz5Q==</iv>'
-                        '</header>'
-                        '<payload>5eCvRJz6ASe8YzCyhB6W3JozxHec</payload>'
-                '</encrypted>'
-                '<markable xmlns="urn:xmpp:chat-markers:0"/>'
-                '<store xmlns="urn:xmpp:hints"/>'
+            '<body>Some default body if encryption fails.</body>'
+            '<encrypted xmlns="{0}">'
+            '<header sid="1461841909">'
+            '<key rid="1260459496">dummy</key>'
+            '<iv>PnZsChVPjwI6jTL6fpkz5Q==</iv>'
+            '</header>'
+            '<payload>5eCvRJz6ASe8YzCyhB6W3JozxHec</payload>'
+            '</encrypted>'
+            '<markable xmlns="urn:xmpp:chat-markers:0"/>'
+            '<request xmlns="urn:xmpp:receipts"/>'
+            '<store xmlns="urn:xmpp:hints"/>'
             '</message>'
         ).format(NS_OMEMO)
 
