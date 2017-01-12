@@ -22,11 +22,11 @@ def encrypt_stanza(stanza):
     fulljid = msg_xml.attrib.get('from', ProfOmemoUser().fulljid)
     jid = msg_xml.attrib['to']
     account = jid.rsplit('/', 1)[0]
-
+    msg_id = msg_xml.attrib['id']
     body_node = msg_xml.find('.//body')
     plaintext = body_node.text
 
-    return create_encrypted_message(fulljid, account, plaintext)
+    return create_encrypted_message(fulljid, account, plaintext, msg_id=msg_id)
 
 
 def update_devicelist(account, recipient, devices):
@@ -302,9 +302,12 @@ def create_bundle_request_stanza(account, recipient):
         return stanza
 
 
-def create_encrypted_message(from_jid, to_jid, plaintext):
+def create_encrypted_message(from_jid, to_jid, plaintext, msg_id=None):
 
     OMEMO_MSG = ('<message to="{to}" from="{from}" id="{id}" type="chat">'
+                 '<body>I sent you an OMEMO encrypted message but your client '
+                 'doesn\'t seem to support that. Find more information on '
+                 'https://conversations.im/omemo</body>'
                  '<encrypted xmlns="{omemo_ns}">'
                  '<header sid="{sid}">'
                  '{keys}'
@@ -312,6 +315,8 @@ def create_encrypted_message(from_jid, to_jid, plaintext):
                  '</header>'
                  '<payload>{enc_body}</payload>'
                  '</encrypted>'
+                 '<markable xmlns="urn:xmpp:chat-markers:0"/>'
+                 '<request xmlns="urn:xmpp:receipts"/>'
                  '<store xmlns="urn:xmpp:hints"/>'
                  '</message>')
 
@@ -325,7 +330,7 @@ def create_encrypted_message(from_jid, to_jid, plaintext):
 
     msg_dict = {'to': to_jid,
                 'from': from_jid,
-                'id': str(uuid.uuid4()),
+                'id': msg_id or str(uuid.uuid4()),
                 'omemo_ns': NS_OMEMO,
                 'sid': msg_dict['sid'],
                 'keys': keys_str,
