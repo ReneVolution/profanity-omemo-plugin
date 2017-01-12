@@ -29,6 +29,39 @@ class ProfOmemoState(object):
         return cls.__states[current_account]
 
 
+class ProfOmemoSessions(object):
+
+    __sessions = {}
+
+    @classmethod
+    def sessions(cls):
+        return cls.__sessions
+
+    @classmethod
+    def add(cls, jid, session):
+        account = jid.rsplit('/', 1)[0]
+        cls.__sessions[account] = session
+
+    @classmethod
+    def remove(cls, account):
+        try:
+            del cls.__sessions[account]
+        except KeyError:
+            logger.warning('Tried to delete an unknown session.')
+
+    @classmethod
+    def get_session(cls, account):
+        return cls.__sessions.get(account)
+
+    @classmethod
+    def has_session(cls, account):
+        return account in cls.__sessions.keys()
+
+    @classmethod
+    def reset(cls):
+        cls.__sessions = {}
+
+
 class ProfOmemoUser(object):
     """ ProfOmemoUser Singleton """
 
@@ -44,6 +77,3 @@ class ProfOmemoUser(object):
     def reset(cls):
         cls.account = None
         cls.fulljid = None
-
-    def __repr__(self):
-        return '{0} <{1}>'.format(self.account, self.fulljid)

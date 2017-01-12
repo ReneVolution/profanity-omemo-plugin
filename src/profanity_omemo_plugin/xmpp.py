@@ -21,12 +21,12 @@ def encrypt_stanza(stanza):
     msg_xml = ET.fromstring(stanza)
     fulljid = msg_xml.attrib.get('from', ProfOmemoUser().fulljid)
     jid = msg_xml.attrib['to']
-    raw_jid = jid.rsplit('/', 1)[0]
+    account = jid.rsplit('/', 1)[0]
 
     body_node = msg_xml.find('.//body')
     plaintext = body_node.text
 
-    return create_encrypted_message(fulljid, raw_jid, plaintext)
+    return create_encrypted_message(fulljid, account, plaintext)
 
 
 def update_devicelist(account, recipient, devices):
@@ -44,6 +44,26 @@ def update_devicelist(account, recipient, devices):
         logger.info('Device List update done.')
 
 
+def get_recipient(stanza):
+    try:
+        xml = ET.fromstring(stanza)
+        recipient = xml.attrib['to']
+    except:
+        return None
+
+    return recipient
+
+
+def get_root_attrib(stanza, attrib):
+    try:
+        xml = ET.fromstring(stanza)
+        result = xml.attrib[attrib]
+    except:
+        return None
+
+    return result
+
+
 ################################################################################
 # Stanza validation
 ################################################################################
@@ -53,7 +73,7 @@ def stanza_is_valid_xml(stanza):
     try:
         _ = ET.fromstring(stanza)
     except Exception as e:
-        logger.error('Stanza is not valid xml. {}'.format(e))
+        logger.error('Stanza is not valid xml. {0}'.format(e))
         logger.error(stanza)
         return False
 
@@ -77,6 +97,12 @@ def is_xmpp_message(stanza):
     stanza = stanza or ''
     is_valid = all([NS_OMEMO in stanza, 'body' in stanza])
     return is_valid
+
+
+def is_xmpp_plaintext_message(stanza):
+    stanza = stanza or ''
+    return 'body' in stanza
+
 
 ################################################################################
 # Unwrapping XMPP stanzas
