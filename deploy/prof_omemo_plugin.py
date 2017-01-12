@@ -10,7 +10,7 @@ from functools import wraps
 import prof
 
 import profanity_omemo_plugin.xmpp as xmpp
-from profanity_omemo_plugin.constants import NS_DEVICE_LIST_NOTIFY, SETTINGS_GROUP
+from profanity_omemo_plugin.constants import NS_DEVICE_LIST_NOTIFY, SETTINGS_GROUP, OMEMO_DEFAULT_ENABLED
 from profanity_omemo_plugin.log import get_plugin_logger
 from profanity_omemo_plugin.prof_omemo_state import (ProfOmemoState,
                                                      ProfOmemoUser,
@@ -66,7 +66,7 @@ def omemo_enabled(else_return=None):
     def wrapper(func):
         @wraps(func)
         def func_wrapper(*args, **kwargs):
-            enabled = prof.settings_boolean_get(SETTINGS_GROUP, 'enabled', False)
+            enabled = prof.settings_boolean_get(SETTINGS_GROUP, 'enabled', OMEMO_DEFAULT_ENABLED)
             if enabled is True:
                 return func(*args, **kwargs)
 
@@ -289,7 +289,7 @@ def _parse_args(arg1=None, arg2=None):
         prof.cons_show('Account: {0}'.format(account))
 
     elif arg1 == "status":
-        enabled = prof.settings_boolean_get(SETTINGS_GROUP, 'enabled', False)
+        enabled = prof.settings_boolean_get(SETTINGS_GROUP, 'enabled', OMEMO_DEFAULT_ENABLED)
         prof.cons_show('OMEMO PLugin Enabled: {0}'.format(enabled))
 
     elif arg1 == "fulljid":
