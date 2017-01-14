@@ -14,7 +14,7 @@ from profanity_omemo_plugin.constants import NS_DEVICE_LIST_NOTIFY, SETTINGS_GRO
 from profanity_omemo_plugin.log import get_plugin_logger
 from profanity_omemo_plugin.prof_omemo_state import (ProfOmemoState,
                                                      ProfOmemoUser,
-                                                     ProfOmemoSessions)
+                                                     ProfActiveOmemoChats)
 
 logger = get_plugin_logger()
 
@@ -52,7 +52,7 @@ def has_session(attrib, else_return=None):
                 logger.error('Recipient nor valid.')
                 return else_return
 
-            if ProfOmemoSessions.has_session(account):
+            if ProfActiveOmemoChats.has_session(account):
                 return func(stanza)
 
             logger.warning('No Session found for user: {0}.'.format(recipient))
@@ -97,36 +97,36 @@ def _init_omemo():
 
 
 def _announce_own_bundle():
-    account = ProfOmemoUser().account
-    own_bundle_stanza = xmpp.create_own_bundle_stanza(account)
+    own_bundle_stanza = xmpp.create_own_bundle_stanza()
     send_stanza(own_bundle_stanza)
 
 
 def _start_omemo_session(jid):
     # should be started before the first message is sent.
 
-    # we store the jid in ProfOmemoSessions as the user at least intends to use
-    # OMEMO encryption. The respecting methods should then not ignore sending
-    # OMEMO messages and fail if no session was created then.
-    ProfOmemoSessions.add(jid, None)
+    # we store the jid in ProfActiveOmemoChats as the user at least intends to
+    # use OMEMO encryption. The respecting methods should then not ignore
+    # sending OMEMO messages and fail if no session was created then.
+    ProfActiveOmemoChats.add(jid, None)
 
     logger.debug('Query Devicelist for {0}'.format(jid))
     _query_device_list(jid)
-    logger.debug('Query bundle info for {0}'.format(jid))
-    _fetch_bundle(jid)
+    # logger.debug('Query bundle info for {0}'.format(jid))
+    # own_device_id = ProfOmemoState().own_device_id
+    # _fetch_bundle(jid, own_device_id)
 
 
 def _end_omemo_session(jid):
-    ProfOmemoSessions.remove(jid)
+    ProfActiveOmemoChats.remove(jid)
 
 
 ################################################################################
 # Stanza handling
 ################################################################################
 
-def _fetch_bundle(recipient):
+def _fetch_bundle(recipient, deviceid):
     account = ProfOmemoUser().account
-    stanza = xmpp.create_bundle_request_stanza(account, recipient)
+    stanza = xmpp.create_bundle_request_stanza(account, recipient, deviceid)
     send_stanza(stanza)
 
 
@@ -155,7 +155,7 @@ def _handle_bundle_update(stanza):
 
     try:
         session = omemo_state.build_session(sender, device_id, bundle_info)
-        ProfOmemoSessions.add(sender, session)
+        ProfActiveOmemoChats.add(sender, session)
         prof.completer_add('/omemo end', [sender])
     except Exception as e:
         msg = 'Could not build session with {0}:{1}. {2}:{3} '
@@ -184,12 +184,33 @@ def _query_device_list(contact_jid):
 @omemo_enabled()
 @has_session('to')
 def prof_on_message_stanza_send(stanza):
+    # TODO: Should we ensure all devices have sessions before we encrypt???
     if xmpp.is_xmpp_plaintext_message(stanza):
         encrypted_stanza = xmpp.encrypt_stanza(stanza)
         if xmpp.stanza_is_valid_xml(encrypted_stanza):
             return encrypted_stanza
 
     return None
+
+
+@omemo_enabled
+def prof_pre_chat_message_send(barejid, message):
+    """ Called before a chat message is sent
+
+    :returns: the new message to send, or None to preserve the original message
+    """
+    omemo_state = ProfOmemoState()
+    devices_without_sessions = omemo_state.devices_without_sessions(barejid)
+
+    if devices_without_sessions:
+        d_str = ', '.join(devices_without_sessions)
+        msg = 'Requesting bundles for missing devices {0}'.format(d_str)
+
+        logger.info(msg)
+        prof.notify(msg, 5000, 'Profanity Omemo Plugin')
+
+    for device in devices_without_sessions:
+        _fetch_bundle(barejid, device)
 
 
 ################################################################################
@@ -261,9 +282,7 @@ def _parse_args(arg1=None, arg2=None):
     account = ProfOmemoUser().account
     fulljid = ProfOmemoUser().fulljid
 
-    if arg1 == "announce":
-        _announce_own_bundle()
-    elif arg1 == "on":
+    if arg1 == "on":
         prof.settings_boolean_set(SETTINGS_GROUP, "enabled", True)
     elif arg1 == "off":
         prof.settings_boolean_set(SETTINGS_GROUP, "enabled", False)
