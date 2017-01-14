@@ -28,7 +28,8 @@ import prof
 import profanity_omemo_plugin.xmpp as xmpp
 from profanity_omemo_plugin.constants import (NS_DEVICE_LIST_NOTIFY,
                                               SETTINGS_GROUP,
-                                              OMEMO_DEFAULT_ENABLED)
+                                              OMEMO_DEFAULT_ENABLED,
+                                              OMEMO_DEFAULT_MESSAGE_PREFIX)
 from profanity_omemo_plugin.log import get_plugin_logger
 from profanity_omemo_plugin.prof_omemo_state import (ProfOmemoState,
                                                      ProfOmemoUser,
@@ -61,8 +62,23 @@ def _get_omemo_enabled_setting():
 
 
 def _set_omemo_enabled_setting(enabled):
-    logger.debug('Plugin enabled: {0}'.format(enabled))
-    prof.settings_boolean_set(SETTINGS_GROUP, "enabled", enabled)
+    msg = 'Plugin enabled: {0}'.format(enabled)
+    logger.debug(msg)
+    prof.cons_show(msg)
+    prof.settings_boolean_set(SETTINGS_GROUP, 'enabled', enabled)
+
+
+def _get_omemo_decrypted_message_prefix():
+    return prof.settings_string_get(
+        SETTINGS_GROUP, 'message_prefix', OMEMO_DEFAULT_MESSAGE_PREFIX)
+
+
+def _set_omemo_decrypted_message_prefix(prefix):
+    msg = 'OMEMO Message Prefix: {0}'.format(prefix)
+    logger.debug(msg)
+    prof.cons_show(msg)
+    prof.settings_string_set(SETTINGS_GROUP, 'message_prefix', prefix)
+
 
 ################################################################################
 # Decorators
@@ -266,7 +282,8 @@ def prof_on_message_stanza_receive(stanza):
             plain_msg = omemo_state.decrypt_msg(msg_dict)
             logger.info(u'Received Plain Message: {}'.format(plain_msg))
             if plain_msg:
-                prefixed_msg = u'[*OMEMO*] {}'.format(plain_msg)
+                prefix = _get_omemo_decrypted_message_prefix()
+                prefixed_msg = u'{0} {1}'.format(prefix, plain_msg)
                 prof.incoming_message(sender, resource, prefixed_msg)
             return False
         except Exception as e:
@@ -312,11 +329,11 @@ def _parse_args(arg1=None, arg2=None):
     account = ProfOmemoUser().account
     fulljid = ProfOmemoUser().fulljid
 
-    if arg1 == "on":
+    if arg1 == 'on':
         _set_omemo_enabled_setting(True)
-    elif arg1 == "off":
+    elif arg1 == 'off':
         _set_omemo_enabled_setting(False)
-    elif arg1 == "start":
+    elif arg1 == 'start':
         # ensure we are in a chat window
         jid = prof.get_current_muc() or prof.get_current_recipient()
 
@@ -327,24 +344,24 @@ def _parse_args(arg1=None, arg2=None):
         if jid:
             _start_omemo_session(jid)
 
-    elif arg1 == "end":
+    elif arg1 == 'end':
         # ensure we are in a chat window
         jid = arg2 or prof.get_current_muc() or prof.get_current_recipient()
         logger.info('Ending OMEMO session with: {0}'.format(jid))
         if jid:
             _end_omemo_session(jid)
 
-    elif arg1 == "account":
+    elif arg1 == 'account':
         prof.cons_show('Account: {0}'.format(account))
 
-    elif arg1 == "status":
+    elif arg1 == 'status':
         enabled = _get_omemo_enabled_setting()
         prof.cons_show('OMEMO PLugin Enabled: {0}'.format(enabled))
 
-    elif arg1 == "fulljid":
+    elif arg1 == 'fulljid':
         prof.cons_show('Current JID: {0}'.format(fulljid))
 
-    elif arg1 == "show_devices" and arg2 is not None:
+    elif arg1 == 'show_devices' and arg2 is not None:
         account = arg2
         omemo_state = ProfOmemoState()
         prof.cons_show('Requesting Devices...')
@@ -363,34 +380,37 @@ def _parse_args(arg1=None, arg2=None):
 def prof_init(version, status, account_name, fulljid):
     logger.info('prof_init() called')
     synopsis = [
-        "/omemo",
-        "/omemo on|off",
-        "/omemo status",
-        "/omemo start|end [jid]",
-        "/omemo announce",
-        "/omemo account",
-        "/omemo fulljid",
-        "/omemo show_devices"
+        '/omemo',
+        '/omemo on|off',
+        '/omemo start|end [jid]',
+        '/omemo set'
+        '/omemo status',
+        '/omemo account',
+        '/omemo fulljid',
+        '/omemo show_devices'
     ]
 
-    description = "Plugin to enable OMEMO encryption"
+    description = 'Plugin to enable OMEMO encryption'
     args = [
-        ["start|end <jid>", ("Start an OMEMO based conversation with <jid> "
-                             "window or current window.")],
-        ["on|off", "Enable/Disable the Profanity OMEMO Plugin"],
-        ["status", "Display the current Profanity OMEMO PLugin stauts."],
-        ["account", "Show current account name"],
-        ["fulljid", "Show current <full-jid>"]
+        ['on|off', 'Enable/Disable the Profanity OMEMO Plugin'],
+        ['start|end <jid>', ('Start an OMEMO based conversation with <jid> '
+                             'window or current window.')],
+        ['set', 'Set Settings like Message Prefix'],
+        ['status', 'Display the current Profanity OMEMO PLugin stauts.'],
+        ['account', 'Show current account name'],
+        ['fulljid', 'Show current <full-jid>']
     ]
 
     examples = []
 
     # ensure the plugin is not registered if python-omemo is not available
-    prof.register_command("/omemo", 1, 2,
+    prof.register_command('/omemo', 1, 3,
                           synopsis, description, args, examples, _parse_args)
 
-    prof.completer_add("/omemo", ["on", "off", "status", "start", "end", "announce",
-                                  "account", "fulljid", "show_devices"])
+    prof.completer_add('/omemo', ['on', 'off', 'status', 'start', 'end', 'set'
+                                  'account', 'fulljid', 'show_devices'])
+
+    prof.completer_add('/omemo set', ['message_prefix'])
 
     # set user and init omemo only if account_name and fulljid provided
     if account_name is not None and fulljid is not None:
