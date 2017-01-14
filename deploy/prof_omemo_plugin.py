@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# TODO: Plugin on/off states if a user is connected or not - global -
-# TODO: /omemo start/stop handling per user
 # TODO: Allow user to prefix OMEMO encrypted/decrypted messages
 
 # This file will be copied to the profanity plugins install location
@@ -41,20 +39,24 @@ def send_stanza(stanza):
 # Decorators
 ################################################################################
 
-def has_session(attrib, else_return=None):
+def require_sessions_for_all_devices(attrib, else_return=None):
     def wrapper(func):
         @wraps(func)
         def func_wrapper(stanza):
             recipient = xmpp.get_root_attrib(stanza, attrib)
             try:
-                account = recipient.rsplit('/', 1)[0]
+                contat_jid = recipient.rsplit('/', 1)[0]
             except AttributeError:
-                logger.error('Recipient nor valid.')
+                logger.error('Recipient not valid.')
                 return else_return
 
-            if ProfActiveOmemoChats.has_session(account):
+            state = ProfOmemoState()
+            devices_without_sessions = state.devices_without_sessions(contat_jid)
+
+            if not devices_without_sessions:
                 return func(stanza)
 
+            # TODO: request bundles for missing devices
             logger.warning('No Session found for user: {0}.'.format(recipient))
             return else_return
 
@@ -182,7 +184,7 @@ def _query_device_list(contact_jid):
 ################################################################################
 
 @omemo_enabled()
-@has_session('to')
+@require_sessions_for_all_devices('to')
 def prof_on_message_stanza_send(stanza):
     # TODO: Should we ensure all devices have sessions before we encrypt???
     if xmpp.is_xmpp_plaintext_message(stanza):

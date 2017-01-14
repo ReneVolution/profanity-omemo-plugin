@@ -30,6 +30,9 @@ def encrypt_stanza(stanza):
 
 
 def update_devicelist(account, recipient, devices):
+    # TODO: Call setActiveState with received devicelist
+    # see https://dev.gajim.org/gajim/gajim-plugins/blob/master/omemo/omemoplugin.py#L1060-1096
+    # and https://dev.gajim.org/gajim/gajim-plugins/blob/master/omemo/omemoplugin.py#L706-792
     omemo_state = ProfOmemoState()
 
     if devices:
@@ -231,8 +234,7 @@ def unpack_devicelist_info(stanza):
 # Create XMPP stanzas
 ################################################################################
 
-def create_own_bundle_stanza(account):
-    # TODO: move it to wrap/unwrap methods
+def create_own_bundle_stanza():
     announce_template = ('<iq from="{from_jid}" type="set" id="{req_id}">'
                          '<pubsub xmlns="http://jabber.org/protocol/pubsub">'
                          '<publish node="{bundles_ns}:{device_id}">'
@@ -246,7 +248,8 @@ def create_own_bundle_stanza(account):
 
     omemo_state = ProfOmemoState()
     own_bundle = omemo_state.bundle
-    bundle_msg = announce_template.format(from_jid=account,
+    own_jid = omemo_state.own_jid
+    bundle_msg = announce_template.format(from_jid=own_jid,
                                           req_id=str(uuid.uuid4()),
                                           device_id=omemo_state.own_device_id,
                                           bundles_ns=NS_BUNDLES,
@@ -282,24 +285,22 @@ def create_own_bundle_stanza(account):
     return bundle_stanza
 
 
-def create_bundle_request_stanza(account, recipient):
-    omemo_state = ProfOmemoState()
-    recipient_devices = omemo_state.device_list_for(recipient)
-    logger.info('Fetching bundle for devices {0} of {1}'.format(recipient_devices, recipient))
+def create_bundle_request_stanza(account, recipient, deviceid):
+    logger.info('Fetching bundle for device id {0} of {1}'.format(deviceid, recipient))
 
-    for device_id in recipient_devices:
-        bundle_req_root = ET.Element('iq')
-        bundle_req_root.set('type', 'get')
-        bundle_req_root.set('from', account)
-        bundle_req_root.set('to', recipient)
-        bundle_req_root.set('id', str(uuid.uuid4()))
-        pubsub_node = ET.SubElement(bundle_req_root, 'pubsub')
-        pubsub_node.set('xmlns', 'http://jabber.org/protocol/pubsub')
-        items_node = ET.SubElement(pubsub_node, 'items')
-        items_node.set('node', '{0}:{1}'.format(NS_BUNDLES, device_id))
+    bundle_req_root = ET.Element('iq')
+    bundle_req_root.set('type', 'get')
+    bundle_req_root.set('from', account)
+    bundle_req_root.set('to', recipient)
+    bundle_req_root.set('id', str(uuid.uuid4()))
+    pubsub_node = ET.SubElement(bundle_req_root, 'pubsub')
+    pubsub_node.set('xmlns', 'http://jabber.org/protocol/pubsub')
+    items_node = ET.SubElement(pubsub_node, 'items')
+    items_node.set('node', '{0}:{1}'.format(NS_BUNDLES, deviceid))
 
-        stanza = ET.tostring(bundle_req_root, encoding='utf8', method='html')
-        return stanza
+    stanza = ET.tostring(bundle_req_root, encoding='utf8', method='html')
+
+    return stanza
 
 
 def create_encrypted_message(from_jid, to_jid, plaintext, msg_id=None):
@@ -355,7 +356,6 @@ def create_devicelist_update_msg(fulljid):
                  '</pubsub>'
                  '</iq>')
 
-    account = fulljid.rsplit('/', 1)[0]
     omemo_state = ProfOmemoState()
 
     # TODO: This looks weird - there could be more than one device id
