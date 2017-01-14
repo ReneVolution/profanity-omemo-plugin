@@ -16,20 +16,20 @@ class ProfOmemoState(object):
     __states = {}
 
     def __new__(cls, *args, **kwargs):
-        current_account = ProfOmemoUser().account
-        if not current_account:
+        own_jid = ProfOmemoUser().account
+        if not own_jid:
             raise RuntimeError('No User connected.')
 
-        if current_account not in cls.__states:
+        if own_jid not in cls.__states:
             # create the OmemoState for the current user
-            connection = get_connection(current_account)
-            new_state = OmemoState(current_account, connection)
-            cls.__states[current_account] = new_state
+            connection = get_connection(own_jid)
+            new_state = OmemoState(own_jid, connection, own_jid, None)
+            cls.__states[own_jid] = new_state
 
-        return cls.__states[current_account]
+        return cls.__states[own_jid]
 
 
-class ProfOmemoSessions(object):
+class ProfActiveOmemoChats(object):
 
     __sessions = {}
 
