@@ -11,13 +11,13 @@ sys.path.append(deploy_root)
 sys.modules['prof'] = MagicMock()
 import prof_omemo_plugin as plugin
 from profanity_omemo_plugin.constants import NS_OMEMO, NS_DEVICE_LIST
-from profanity_omemo_plugin.prof_omemo_state import ProfOmemoSessions
+from profanity_omemo_plugin.prof_omemo_state import ProfActiveOmemoChats
 
 
 class TestPluginHooks(object):
 
     def teardown_method(self, test_method):
-        ProfOmemoSessions.reset()
+        ProfActiveOmemoChats.reset()
 
     def test_ensure_valid_stanza(self):
         assert plugin.send_stanza(None) is False
@@ -56,13 +56,13 @@ class TestPluginHooks(object):
 
     def test_has_session_decorator_returns_func_result(self):
 
-        @plugin.has_session('to')
+        @plugin.require_sessions_for_all_devices('to')
         def func(x):
             return x
 
         recipient = 'juliet@capulet.lit'
 
-        ProfOmemoSessions.add(recipient, 'SOMEMAGICKEY')
+        ProfActiveOmemoChats.add(recipient, 'SOMEMAGICKEY')
 
         stanza = '<message to="{}"></message>'.format(recipient)
 
@@ -70,20 +70,20 @@ class TestPluginHooks(object):
 
     def test_has_session_decorator_returns_func_result_on_none_session(self):
 
-        @plugin.has_session('to')
+        @plugin.require_sessions_for_all_devices('to')
         def func(x):
             return x
 
         recipient = 'juliet@capulet.lit'
 
-        ProfOmemoSessions.add(recipient, None)
+        ProfActiveOmemoChats.add(recipient, None)
 
         stanza = '<message to="{}"></message>'.format(recipient)
 
         assert func(stanza) == stanza
 
     def test_has_session_decorator_returns_default_if_no_session(self):
-        @plugin.has_session('to')
+        @plugin.require_sessions_for_all_devices('to')
         def func(x):
             return x
 
@@ -93,7 +93,7 @@ class TestPluginHooks(object):
         assert func(stanza) is None
 
     def test_has_session_decorator_returns_custom_return_if_no_session(self):
-        @plugin.has_session('to', else_return='whatever')
+        @plugin.require_sessions_for_all_devices('to', else_return='whatever')
         def func(x):
             return x
 
@@ -103,12 +103,12 @@ class TestPluginHooks(object):
         assert func(stanza) is 'whatever'
 
     def test_has_session_decorator_returns_default_on_error(self):
-        @plugin.has_session('not_valid_attrib')
+        @plugin.require_sessions_for_all_devices('not_valid_attrib')
         def func(x):
             return x
 
         recipient = 'juliet@capulet.lit'
-        ProfOmemoSessions.add(recipient, 'SOMEMAGICKEY')
+        ProfActiveOmemoChats.add(recipient, 'SOMEMAGICKEY')
 
         stanza = '<message to="{}"></message>'.format(recipient)
 
@@ -139,13 +139,13 @@ class TestPluginHooks(object):
     @patch('prof.settings_boolean_get')
     def test_stacked_decorators(self, settings_boolean_get):
         @plugin.omemo_enabled(else_return='enabled_first')
-        @plugin.has_session('to', else_return='session_second')
+        @plugin.require_sessions_for_all_devices('to', else_return='session_second')
         def func(x):
             return x
 
         settings_boolean_get.return_value = True
         recipient = 'juliet@capulet.lit'
-        ProfOmemoSessions.add(recipient, 'SOMEMAGICKEY')
+        ProfActiveOmemoChats.add(recipient, 'SOMEMAGICKEY')
 
         stanza = '<message to="{}"></message>'.format(recipient)
 
@@ -154,7 +154,7 @@ class TestPluginHooks(object):
     @patch('prof.settings_boolean_get')
     def test_stacked_decorators_omemo_enabled_priority(self, settings_boolean_get):
         @plugin.omemo_enabled(else_return='enabled_first')
-        @plugin.has_session('to', else_return='session_second')
+        @plugin.require_sessions_for_all_devices('to', else_return='session_second')
         def func(x):
             return x
 

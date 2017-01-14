@@ -4,7 +4,7 @@ import pytest
 from mock import patch
 
 from profanity_omemo_plugin.prof_omemo_state import ProfOmemoUser, \
-    ProfOmemoState, ProfOmemoSessions
+    ProfOmemoState, ProfActiveOmemoChats
 
 
 def get_test_db_connection():
@@ -16,7 +16,7 @@ class TestProfOmemoUtils(object):
 
     def teardown_method(self, test_method):
         ProfOmemoUser.reset()
-        ProfOmemoSessions.reset()
+        ProfActiveOmemoChats.reset()
 
     def test_prof_omemo_user_is_singleton(self):
         assert ProfOmemoUser().account == ProfOmemoUser().account
@@ -81,35 +81,35 @@ class TestProfOmemoUtils(object):
         account = 'juliet@capulet.lit'
         session = 'FEKLNWKLNGERKLNGLRKWENGKNWKGRWNKGNWKNG'
 
-        omemo_session = ProfOmemoSessions()
+        omemo_session = ProfActiveOmemoChats()
         omemo_session.add(account, session)
 
-        new_omemo_session = ProfOmemoSessions()
+        new_omemo_session = ProfActiveOmemoChats()
 
         assert omemo_session.sessions() == new_omemo_session.sessions()
 
     def test_omemo_sessions_has_no_session_for_user(self):
-        assert ProfOmemoSessions.has_session('youdontknowme@web.io') is False
+        assert ProfActiveOmemoChats.has_session('youdontknowme@web.io') is False
 
     def test_omemo_session_finds_existing_session(self):
         account = 'juliet@capulet.lit'
         session = 'FEKLNWKLNGERKLNGLRKWENGKNWKGRWNKGNWKNG'
 
-        ProfOmemoSessions.add(account, session)
+        ProfActiveOmemoChats.add(account, session)
 
-        assert ProfOmemoSessions.has_session(account) is True
+        assert ProfActiveOmemoChats.has_session(account) is True
 
     def test_omemo_session_remove_session(self):
         account = 'juliet@capulet.lit'
         session = 'FEKLNWKLNGERKLNGLRKWENGKNWKGRWNKGNWKNG'
 
-        ProfOmemoSessions.add(account, session)
+        ProfActiveOmemoChats.add(account, session)
 
-        assert ProfOmemoSessions.has_session(account) is True
+        assert ProfActiveOmemoChats.has_session(account) is True
 
-        ProfOmemoSessions.remove(account)
+        ProfActiveOmemoChats.remove(account)
 
-        assert ProfOmemoSessions.has_session(account) is False
+        assert ProfActiveOmemoChats.has_session(account) is False
 
     def test_omemo_new_session_overwrites_old_session(self):
         jid = 'juliet@capulet.lit/conversations'
@@ -117,28 +117,28 @@ class TestProfOmemoUtils(object):
         session = 'FEKLNWKLNGERKLNGLRKWENGKNWKGRWNKGNWKNG'
 
         # omemo_sessions = ProfOmemoSessions()
-        ProfOmemoSessions.add(jid, session)
+        ProfActiveOmemoChats.add(jid, session)
 
         new_session = 'DHEWVFHVWEKBFVWKJCBELJBVEJLWBVJLWBVJWEB'
-        ProfOmemoSessions.add(account, new_session)
+        ProfActiveOmemoChats.add(account, new_session)
 
-        assert len(ProfOmemoSessions.sessions()) == 1
-        assert ProfOmemoSessions.get_session(account) == new_session
+        assert len(ProfActiveOmemoChats.sessions()) == 1
+        assert ProfActiveOmemoChats.get_session(account) == new_session
 
     def test_omemo_reset_prof_omemo_sessions(self):
         jid = 'juliet@capulet.lit/profanity'
         session = 'FEKLNWKLNGERKLNGLRKWENGKNWKGRWNKGNWKNG'
 
-        ProfOmemoSessions.add(jid, session)
+        ProfActiveOmemoChats.add(jid, session)
 
-        assert len(ProfOmemoSessions.sessions()) == 1
+        assert len(ProfActiveOmemoChats.sessions()) == 1
 
-        ProfOmemoSessions.reset()
+        ProfActiveOmemoChats.reset()
 
-        assert len(ProfOmemoSessions.sessions()) == 0
+        assert len(ProfActiveOmemoChats.sessions()) == 0
 
     def test_omemo_has_none_session(self):
         account = 'juliet@capulet.lit'
-        ProfOmemoSessions.add(account, None)
+        ProfActiveOmemoChats.add(account, None)
 
-        assert ProfOmemoSessions.has_session(account) is True
+        assert ProfActiveOmemoChats.has_session(account) is True
