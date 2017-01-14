@@ -26,7 +26,9 @@ from functools import wraps
 import prof
 
 import profanity_omemo_plugin.xmpp as xmpp
-from profanity_omemo_plugin.constants import NS_DEVICE_LIST_NOTIFY, SETTINGS_GROUP, OMEMO_DEFAULT_ENABLED
+from profanity_omemo_plugin.constants import (NS_DEVICE_LIST_NOTIFY,
+                                              SETTINGS_GROUP,
+                                              OMEMO_DEFAULT_ENABLED)
 from profanity_omemo_plugin.log import get_plugin_logger
 from profanity_omemo_plugin.prof_omemo_state import (ProfOmemoState,
                                                      ProfOmemoUser,
@@ -52,6 +54,15 @@ def send_stanza(stanza):
 
     return False
 
+
+def _get_omemo_enabled_setting():
+    return prof.settings_boolean_get(
+        SETTINGS_GROUP, 'enabled', OMEMO_DEFAULT_ENABLED)
+
+
+def _set_omemo_enabled_setting(enabled):
+    logger.debug('Plugin enabled: {0}'.format(enabled))
+    prof.settings_boolean_set(SETTINGS_GROUP, "enabled", enabled)
 
 ################################################################################
 # Decorators
@@ -87,7 +98,8 @@ def omemo_enabled(else_return=None):
     def wrapper(func):
         @wraps(func)
         def func_wrapper(*args, **kwargs):
-            enabled = prof.settings_boolean_get(SETTINGS_GROUP, 'enabled', OMEMO_DEFAULT_ENABLED)
+            enabled = _get_omemo_enabled_setting()
+
             if enabled is True:
                 return func(*args, **kwargs)
 
@@ -132,9 +144,6 @@ def _start_omemo_session(jid):
 
     logger.debug('Query Devicelist for {0}'.format(jid))
     _query_device_list(jid)
-    # logger.debug('Query bundle info for {0}'.format(jid))
-    # own_device_id = ProfOmemoState().own_device_id
-    # _fetch_bundle(jid, own_device_id)
 
 
 def _end_omemo_session(jid):
@@ -144,12 +153,6 @@ def _end_omemo_session(jid):
 ################################################################################
 # Stanza handling
 ################################################################################
-
-def _fetch_bundle(recipient, deviceid):
-    account = ProfOmemoUser().account
-    stanza = xmpp.create_bundle_request_stanza(account, recipient, deviceid)
-    send_stanza(stanza)
-
 
 def _handle_devicelist_update(stanza):
     account = ProfOmemoUser().account
@@ -192,6 +195,12 @@ def _announce_own_devicelist():
     send_stanza(query_msg)
 
 
+def _query_bundle_info_for(recipient, deviceid):
+    account = ProfOmemoUser().account
+    stanza = xmpp.create_bundle_request_stanza(account, recipient, deviceid)
+    send_stanza(stanza)
+
+
 def _query_device_list(contact_jid):
     fulljid = ProfOmemoUser().fulljid
     query_msg = xmpp.create_devicelist_query_msg(fulljid, contact_jid)
@@ -231,7 +240,7 @@ def prof_pre_chat_message_send(barejid, message):
         prof.notify(msg, 5000, 'Profanity Omemo Plugin')
 
         for device in uninitialzed_devices:
-            _fetch_bundle(barejid, device)
+            _query_bundle_info_for(barejid, device)
 
 
 ################################################################################
@@ -304,9 +313,9 @@ def _parse_args(arg1=None, arg2=None):
     fulljid = ProfOmemoUser().fulljid
 
     if arg1 == "on":
-        prof.settings_boolean_set(SETTINGS_GROUP, "enabled", True)
+        _set_omemo_enabled_setting(True)
     elif arg1 == "off":
-        prof.settings_boolean_set(SETTINGS_GROUP, "enabled", False)
+        _set_omemo_enabled_setting(False)
     elif arg1 == "start":
         # ensure we are in a chat window
         jid = prof.get_current_muc() or prof.get_current_recipient()
@@ -329,7 +338,7 @@ def _parse_args(arg1=None, arg2=None):
         prof.cons_show('Account: {0}'.format(account))
 
     elif arg1 == "status":
-        enabled = prof.settings_boolean_get(SETTINGS_GROUP, 'enabled', OMEMO_DEFAULT_ENABLED)
+        enabled = _get_omemo_enabled_setting()
         prof.cons_show('OMEMO PLugin Enabled: {0}'.format(enabled))
 
     elif arg1 == "fulljid":
