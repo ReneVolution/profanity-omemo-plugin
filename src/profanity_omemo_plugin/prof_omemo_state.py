@@ -25,6 +25,12 @@ logger = get_plugin_logger()
 
 try:
     from omemo.state import OmemoState
+
+    def _isTrusted(self, recipient_id, device_id):
+        return True
+
+    OmemoState.isTrusted = _isTrusted
+
 except ImportError:
     logger.error('Could not import OmemoState')
     raise

@@ -18,7 +18,9 @@
 # the Profanity OMEMO plugin.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import random
 import uuid
+from base64 import b64decode, b64encode
 
 from constants import NS_OMEMO, NS_DEVICE_LIST, NS_DEVICE_LIST_NOTIFY, NS_BUNDLES
 from log import get_plugin_logger
@@ -145,6 +147,7 @@ def unpack_bundle_info(stanza):
 
     signedPreKeyPublic_node = bundle_node.find('.//{%s}signedPreKeyPublic' % NS_OMEMO)
     signedPreKeyPublic = signedPreKeyPublic_node.text
+
     signedPreKeyId = int(signedPreKeyPublic_node.attrib['signedPreKeyId'])
 
     signedPreKeySignature_node = bundle_node.find('.//{%s}signedPreKeySignature' % NS_OMEMO)
@@ -157,15 +160,29 @@ def unpack_bundle_info(stanza):
 
     prekeys = [(int(n.attrib['preKeyId']), n.text) for n in prekeys_node]
 
+    picked_key_tuple = random.SystemRandom().choice(prekeys)
+    preKeyId, preKeyPublic = picked_key_tuple
+
+    if not preKeyId:
+        logger.warning('OMEMO PreKey has no id set')
+        return
+
+    if not preKeyPublic:
+        return
+
     bundle_dict = {
         'sender': sender,
         'device': device_id,
         'signedPreKeyId': signedPreKeyId,
-        'signedPreKeyPublic': signedPreKeyPublic,
-        'signedPreKeySignature': signedPreKeySignature,
-        'identityKey': identityKey,
-        'prekeys': prekeys
+        'signedPreKeyPublic': b64decode(signedPreKeyPublic),
+        'signedPreKeySignature': b64decode(signedPreKeySignature),
+        'identityKey': b64decode(identityKey),
+        'preKeyId': preKeyId,
+        'preKeyPublic': b64decode(preKeyPublic)
     }
+
+    for k, v in bundle_dict.items():
+        logger.info('{0} => {1} ({2})'.format(k, v, len(str(v))))
 
     return bundle_dict
 
@@ -326,9 +343,7 @@ def create_bundle_request_stanza(account, recipient, deviceid):
 def create_encrypted_message(from_jid, to_jid, plaintext, msg_id=None):
 
     OMEMO_MSG = ('<message to="{to}" from="{from}" id="{id}" type="chat">'
-                 '<body>I sent you an OMEMO encrypted message but your client '
-                 'doesn\'t seem to support that. Find more information on '
-                 'https://conversations.im/omemo</body>'
+                 '<body>I sent you an OMEMO encrypted message.</body>'
                  '<encrypted xmlns="{omemo_ns}">'
                  '<header sid="{sid}">'
                  '{keys}'
@@ -347,7 +362,7 @@ def create_encrypted_message(from_jid, to_jid, plaintext, msg_id=None):
     # build encrypted message from here
     keys_tpl = '<key rid="{0}">{1}</key>'
     keys_dict = msg_dict['keys']
-    keys_str = ''.join([keys_tpl.format(rid, key) for rid, key in keys_dict.iteritems()])
+    keys_str = ''.join([keys_tpl.format(rid, b64encode(key)) for rid, key in keys_dict.iteritems()])
 
     msg_dict = {'to': to_jid,
                 'from': from_jid,
@@ -355,8 +370,8 @@ def create_encrypted_message(from_jid, to_jid, plaintext, msg_id=None):
                 'omemo_ns': NS_OMEMO,
                 'sid': msg_dict['sid'],
                 'keys': keys_str,
-                'iv': msg_dict['iv'],
-                'enc_body': msg_dict['payload']}
+                'iv': b64encode(msg_dict['iv']),
+                'enc_body': b64encode(msg_dict['payload'])}
 
     enc_msg = OMEMO_MSG.format(**msg_dict)
 

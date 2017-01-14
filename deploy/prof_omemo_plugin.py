@@ -18,8 +18,6 @@
 # the Profanity OMEMO plugin.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# TODO: Allow user to prefix OMEMO encrypted/decrypted messages
-
 # This file will be copied to the profanity plugins install location
 from functools import wraps
 
@@ -95,15 +93,17 @@ def require_sessions_for_all_devices(attrib, else_return=None):
                 logger.error('Recipient not valid.')
                 return else_return
 
+            logger.info('Checking Sessions for {0}'.format(recipient))
             state = ProfOmemoState()
             uninitialized_devices = state.devices_without_sessions(contat_jid)
 
             if not uninitialized_devices:
+                logger.info('Recipient {0} has all sessions set up.'.format(recipient))
                 return func(stanza)
 
             _query_device_list(contat_jid)
             logger.warning('No Session found for user: {0}.'.format(recipient))
-            prof.notify('Failed to send last Message.')
+            prof.notify('Failed to send last Message.', 5000, 'Profanity Omemo Plugin')
             return else_return
 
         return func_wrapper
@@ -114,9 +114,11 @@ def omemo_enabled(else_return=None):
     def wrapper(func):
         @wraps(func)
         def func_wrapper(*args, **kwargs):
+            logger.info('Check if Plugins is enabled')
             enabled = _get_omemo_enabled_setting()
 
             if enabled is True:
+                logger.info('Plugin is enabled')
                 return func(*args, **kwargs)
 
             return else_return
@@ -199,7 +201,8 @@ def _handle_bundle_update(stanza):
         prof.completer_add('/omemo end', [sender])
     except Exception as e:
         msg = 'Could not build session with {0}:{1}. {2}:{3} '
-        logger.error(msg.format(sender, device_id, type(e), str(e)))
+        logger.error(msg.format(sender, device_id, e.__class__.__name__, str(e)))
+        return
 
     logger.info('Session built with user: {0} '.format(sender))
 
@@ -207,11 +210,12 @@ def _handle_bundle_update(stanza):
 def _announce_own_devicelist():
     fulljid = ProfOmemoUser().fulljid
     query_msg = xmpp.create_devicelist_update_msg(fulljid)
-    logger.info('Sending Device List Update: {0}'.format(query_msg))
+    logger.info('Announce own device list.')
     send_stanza(query_msg)
 
 
 def _query_bundle_info_for(recipient, deviceid):
+    logger.info('Querying Bundle for {0}:{1}'.format(recipient, deviceid))
     account = ProfOmemoUser().account
     stanza = xmpp.create_bundle_request_stanza(account, recipient, deviceid)
     send_stanza(stanza)
@@ -239,7 +243,7 @@ def prof_on_message_stanza_send(stanza):
     return None
 
 
-@omemo_enabled
+@omemo_enabled()
 def prof_pre_chat_message_send(barejid, message):
     """ Called before a chat message is sent
 
@@ -249,7 +253,7 @@ def prof_pre_chat_message_send(barejid, message):
     uninitialzed_devices = omemo_state.devices_without_sessions(barejid)
 
     if uninitialzed_devices:
-        d_str = ', '.join(uninitialzed_devices)
+        d_str = ', '.join([str(d) for d in uninitialzed_devices])
         msg = 'Requesting bundles for missing devices {0}'.format(d_str)
 
         logger.info(msg)
@@ -258,6 +262,7 @@ def prof_pre_chat_message_send(barejid, message):
         for device in uninitialzed_devices:
             _query_bundle_info_for(barejid, device)
 
+    return message
 
 ################################################################################
 # Receiving hooks
