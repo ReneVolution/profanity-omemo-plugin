@@ -1,4 +1,22 @@
 # -*- coding: utf-8 -*-
+#
+# Copyright 2017 René `reneVolution` Calles <info@renevolution.com>
+#
+# This file is part of Profanity OMEMO plugin.
+#
+# The Profanity OMEMO plugin is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# The Profanity OMEMO plugin is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# the Profanity OMEMO plugin.  If not, see <http://www.gnu.org/licenses/>.
+#
 
 # TODO: Allow user to prefix OMEMO encrypted/decrypted messages
 
@@ -51,13 +69,14 @@ def require_sessions_for_all_devices(attrib, else_return=None):
                 return else_return
 
             state = ProfOmemoState()
-            devices_without_sessions = state.devices_without_sessions(contat_jid)
+            uninitialized_devices = state.devices_without_sessions(contat_jid)
 
-            if not devices_without_sessions:
+            if not uninitialized_devices:
                 return func(stanza)
 
-            # TODO: request bundles for missing devices
+            _query_device_list(contat_jid)
             logger.warning('No Session found for user: {0}.'.format(recipient))
+            prof.notify('Failed to send last Message.')
             return else_return
 
         return func_wrapper
@@ -202,17 +221,17 @@ def prof_pre_chat_message_send(barejid, message):
     :returns: the new message to send, or None to preserve the original message
     """
     omemo_state = ProfOmemoState()
-    devices_without_sessions = omemo_state.devices_without_sessions(barejid)
+    uninitialzed_devices = omemo_state.devices_without_sessions(barejid)
 
-    if devices_without_sessions:
-        d_str = ', '.join(devices_without_sessions)
+    if uninitialzed_devices:
+        d_str = ', '.join(uninitialzed_devices)
         msg = 'Requesting bundles for missing devices {0}'.format(d_str)
 
         logger.info(msg)
         prof.notify(msg, 5000, 'Profanity Omemo Plugin')
 
-    for device in devices_without_sessions:
-        _fetch_bundle(barejid, device)
+        for device in uninitialzed_devices:
+            _fetch_bundle(barejid, device)
 
 
 ################################################################################

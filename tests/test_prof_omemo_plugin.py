@@ -11,13 +11,21 @@ sys.path.append(deploy_root)
 sys.modules['prof'] = MagicMock()
 import prof_omemo_plugin as plugin
 from profanity_omemo_plugin.constants import NS_OMEMO, NS_DEVICE_LIST
-from profanity_omemo_plugin.prof_omemo_state import ProfActiveOmemoChats
+from profanity_omemo_plugin.prof_omemo_state import ProfActiveOmemoChats, ProfOmemoUser
 
 
 class TestPluginHooks(object):
 
+    def setup_method(self, test_method):
+        account = 'me@there.com'
+        fulljid = 'me@there.com/profanity'
+
+        ProfOmemoUser.set_user(account, fulljid)
+
+
     def teardown_method(self, test_method):
         ProfActiveOmemoChats.reset()
+        ProfOmemoUser.reset()
 
     def test_ensure_valid_stanza(self):
         assert plugin.send_stanza(None) is False
@@ -54,21 +62,23 @@ class TestPluginHooks(object):
 
         assert ret_val is None
 
-    def test_has_session_decorator_returns_func_result(self):
+    @patch('omemo.state.OmemoState.devices_without_sessions')
+    def test_has_session_decorator_returns_func_result(self, devices_mock):
+
+        devices_mock.return_value = []
 
         @plugin.require_sessions_for_all_devices('to')
         def func(x):
             return x
 
         recipient = 'juliet@capulet.lit'
-
-        ProfActiveOmemoChats.add(recipient, 'SOMEMAGICKEY')
-
         stanza = '<message to="{}"></message>'.format(recipient)
 
         assert func(stanza) == stanza
 
-    def test_has_session_decorator_returns_func_result_on_none_session(self):
+    @patch('omemo.state.OmemoState.devices_without_sessions')
+    def test_has_session_decorator_returns_func_result_on_none_session(self, devices_mock):
+        devices_mock.return_value = []
 
         @plugin.require_sessions_for_all_devices('to')
         def func(x):
@@ -82,7 +92,10 @@ class TestPluginHooks(object):
 
         assert func(stanza) == stanza
 
-    def test_has_session_decorator_returns_default_if_no_session(self):
+    @patch('omemo.state.OmemoState.devices_without_sessions')
+    def test_has_session_decorator_returns_default_if_no_session(self, devices_mock):
+        devices_mock.return_value = [223, 445]
+
         @plugin.require_sessions_for_all_devices('to')
         def func(x):
             return x
@@ -92,7 +105,10 @@ class TestPluginHooks(object):
 
         assert func(stanza) is None
 
-    def test_has_session_decorator_returns_custom_return_if_no_session(self):
+    @patch('omemo.state.OmemoState.devices_without_sessions')
+    def test_has_session_decorator_returns_custom_return_if_no_session(self, devices_mock):
+        devices_mock.return_value = [4711, 1290]
+
         @plugin.require_sessions_for_all_devices('to', else_return='whatever')
         def func(x):
             return x
