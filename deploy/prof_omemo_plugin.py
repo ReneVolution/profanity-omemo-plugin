@@ -317,7 +317,7 @@ def prof_on_iq_stanza_receive(stanza):
 ################################################################################
 
 
-def _parse_args(arg1=None, arg2=None):
+def _parse_args(arg1=None, arg2=None, arg3=None):
     """ Parse arguments given in command window
 
     arg1: start || end
@@ -343,6 +343,11 @@ def _parse_args(arg1=None, arg2=None):
         logger.info('Start OMEMO session with: {0}'.format(jid))
         if jid:
             _start_omemo_session(jid)
+
+    elif arg1 == 'set':
+        if arg2 == 'message_prefix':
+            if arg3 is not None:
+                _set_omemo_decrypted_message_prefix(arg3)
 
     elif arg1 == 'end':
         # ensure we are in a chat window
