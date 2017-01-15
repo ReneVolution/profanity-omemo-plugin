@@ -33,7 +33,7 @@ from profanity_omemo_plugin.prof_omemo_state import (ProfOmemoState,
                                                      ProfOmemoUser,
                                                      ProfActiveOmemoChats)
 
-plugin_logger = get_plugin_logger()
+log = get_plugin_logger()
 
 
 ################################################################################
@@ -47,7 +47,7 @@ def send_stanza(stanza):
     """
 
     if xmpp.stanza_is_valid_xml(stanza):
-        plugin_logger.debug('Sending Stanza: {}'.format(stanza))
+        log.debug('Sending Stanza: {}'.format(stanza))
         prof.send_stanza(stanza)
         return True
 
@@ -61,7 +61,7 @@ def _get_omemo_enabled_setting():
 
 def _set_omemo_enabled_setting(enabled):
     msg = 'Plugin enabled: {0}'.format(enabled)
-    plugin_logger.debug(msg)
+    log.debug(msg)
     prof.cons_show(msg)
     prof.settings_boolean_set(SETTINGS_GROUP, 'enabled', enabled)
 
@@ -73,7 +73,7 @@ def _get_omemo_decrypted_message_prefix():
 
 def _set_omemo_decrypted_message_prefix(prefix):
     msg = 'OMEMO Message Prefix: {0}'.format(prefix)
-    plugin_logger.debug(msg)
+    log.debug(msg)
     prof.cons_show(msg)
     prof.settings_string_set(SETTINGS_GROUP, 'message_prefix', prefix)
 
@@ -90,19 +90,19 @@ def require_sessions_for_all_devices(attrib, else_return=None):
             try:
                 contat_jid = recipient.rsplit('/', 1)[0]
             except AttributeError:
-                plugin_logger.error('Recipient not valid.')
+                log.error('Recipient not valid.')
                 return else_return
 
-            plugin_logger.info('Checking Sessions for {0}'.format(recipient))
+            log.info('Checking Sessions for {0}'.format(recipient))
             state = ProfOmemoState()
             uninitialized_devices = state.devices_without_sessions(contat_jid)
 
             if not uninitialized_devices:
-                plugin_logger.info('Recipient {0} has all sessions set up.'.format(recipient))
+                log.info('Recipient {0} has all sessions set up.'.format(recipient))
                 return func(stanza)
 
             _query_device_list(contat_jid)
-            plugin_logger.warning('No Session found for user: {0}.'.format(recipient))
+            log.warning('No Session found for user: {0}.'.format(recipient))
             prof.notify('Failed to send last Message.', 5000, 'Profanity Omemo Plugin')
             return else_return
 
@@ -114,11 +114,11 @@ def omemo_enabled(else_return=None):
     def wrapper(func):
         @wraps(func)
         def func_wrapper(*args, **kwargs):
-            plugin_logger.info('Check if Plugins is enabled')
+            log.info('Check if Plugins is enabled')
             enabled = _get_omemo_enabled_setting()
 
             if enabled is True:
-                plugin_logger.info('Plugin is enabled')
+                log.info('Plugin is enabled')
                 return func(*args, **kwargs)
 
             return else_return
@@ -135,11 +135,11 @@ def _init_omemo():
     account = ProfOmemoUser().account
     if account:
         # subscribe to devicelist updates
-        plugin_logger.info('Adding Disco Feature {0}.'.format(NS_DEVICE_LIST_NOTIFY))
+        log.info('Adding Disco Feature {0}.'.format(NS_DEVICE_LIST_NOTIFY))
         # subscribe to device list updates
         prof.disco_add_feature(NS_DEVICE_LIST_NOTIFY)
 
-        plugin_logger.debug('Announcing own bundle info.')
+        log.debug('Announcing own bundle info.')
         _announce_own_devicelist()  # announce own device list
         _announce_own_bundle()  # announce own bundle
 
@@ -160,7 +160,7 @@ def _start_omemo_session(jid):
     # sending OMEMO messages and fail if no session was created then.
     ProfActiveOmemoChats.add(jid)
 
-    plugin_logger.debug('Query Devicelist for {0}'.format(jid))
+    log.debug('Query Devicelist for {0}'.format(jid))
     _query_device_list(jid)
 
 
@@ -182,13 +182,13 @@ def _handle_devicelist_update(stanza):
 
 
 def add_recipient_to_completer(recipient):
-    plugin_logger.info('Adding {} to the completer.'.format(recipient))
+    log.info('Adding {} to the completer.'.format(recipient))
     prof.completer_add('/omemo start', [recipient])
     prof.completer_add('/omemo show_devices', [recipient])
 
 
 def _handle_bundle_update(stanza):
-    plugin_logger.info('Bundle Information received.')
+    log.info('Bundle Information received.')
     omemo_state = ProfOmemoState()
     bundle_info = xmpp.unpack_bundle_info(stanza)
 
@@ -199,22 +199,23 @@ def _handle_bundle_update(stanza):
         omemo_state.build_session(sender, device_id, bundle_info)
         prof.completer_add('/omemo end', [sender])
     except Exception as e:
-        msg = 'Could not build session with {0}:{1}. {2}:{3} '
-        plugin_logger.error(msg.format(sender, device_id, e.__class__.__name__, str(e)))
+        msg_tmpl = 'Could not build session with {0}:{1}. {2}:{3}'
+        msg = msg_tmpl.format(sender, device_id, e.__class__.__name__, str(e))
+        log.error(msg)
         return
 
-    plugin_logger.info('Session built with user: {0} '.format(sender))
+    log.info('Session built with user: {0} '.format(sender))
 
 
 def _announce_own_devicelist():
     fulljid = ProfOmemoUser().fulljid
     query_msg = xmpp.create_devicelist_update_msg(fulljid)
-    plugin_logger.info('Announce own device list.')
+    log.info('Announce own device list.')
     send_stanza(query_msg)
 
 
 def _query_bundle_info_for(recipient, deviceid):
-    plugin_logger.info('Querying Bundle for {0}:{1}'.format(recipient, deviceid))
+    log.info('Query Bundle for {0}:{1}'.format(recipient, deviceid))
     account = ProfOmemoUser().account
     stanza = xmpp.create_bundle_request_stanza(account, recipient, deviceid)
     send_stanza(stanza)
@@ -265,7 +266,7 @@ def prof_pre_chat_message_send(barejid, message):
         d_str = ', '.join([str(d) for d in uninitialzed_devices])
         msg = 'Requesting bundles for missing devices {0}'.format(d_str)
 
-        plugin_logger.info(msg)
+        log.info(msg)
         prof.notify(msg, 5000, 'Profanity Omemo Plugin')
 
         for device in uninitialzed_devices:
@@ -280,14 +281,14 @@ def prof_pre_chat_message_send(barejid, message):
 
 @omemo_enabled(else_return=True)
 def prof_on_message_stanza_receive(stanza):
-    plugin_logger.info('Received Message: {0}'.format(stanza))
+    log.info('Received Message: {0}'.format(stanza))
     if xmpp.is_devicelist_update(stanza):
-        plugin_logger.info('Device List update detected.')
+        log.info('Device List update detected.')
         _handle_devicelist_update(stanza)
         return False
 
     if xmpp.is_encrypted_message(stanza):
-        plugin_logger.info('Received OMEMO encrypted message.')
+        log.info('Received OMEMO encrypted message.')
         omemo_state = ProfOmemoState()
 
         try:
@@ -299,23 +300,23 @@ def prof_on_message_stanza_receive(stanza):
                 plain_msg = omemo_state.decrypt_msg(msg_dict)
             except Exception as e:
                 msg = u'Could not decrypt Messages. {0}: {1}'
-                plugin_logger.error(msg.format(e.__class__.__name__, str(e)))
+                log.error(msg.format(e.__class__.__name__, str(e)))
                 return False
 
             if plain_msg is None:
-                plugin_logger.info(('Could not decrypt Message'))
+                log.info('Could not decrypt Message')
                 return True
 
             if plain_msg:
                 prefix = _get_omemo_decrypted_message_prefix()
-                plugin_logger.info(u'Appending Message Prefix {0}'.format(prefix))
+                log.info(u'Appending Message Prefix {0}'.format(prefix))
                 prefixed_msg = u'{0} {1}'.format(prefix, plain_msg)
                 prof.incoming_message(sender, resource, prefixed_msg)
             return False
 
         except Exception as e:
             # maybe not OMEMO encrypted, profanity will take care then
-            plugin_logger.error('Could not decrypt message. {0}'.format(str(e)))
+            log.error('Could not decrypt message. {0}'.format(str(e)))
 
     return True
 
@@ -323,15 +324,15 @@ def prof_on_message_stanza_receive(stanza):
 @omemo_enabled(else_return=True)
 def prof_on_iq_stanza_receive(stanza):
     # prof_incoming_message() and return FALSE
-    plugin_logger.info('Received IQ: {0}'.format(stanza))
+    log.info('Received IQ: {0}'.format(stanza))
 
     if xmpp.is_bundle_update(stanza):  # bundle information received
         _handle_bundle_update(stanza)
-        plugin_logger.info('Bundle update detected.')
+        log.info('Bundle update detected.')
         return False
 
     elif xmpp.is_devicelist_update(stanza):
-        plugin_logger.info('Device List update detected.')
+        log.info('Device List update detected.')
         _handle_devicelist_update(stanza)
         return False
 
@@ -367,18 +368,18 @@ def _parse_args(arg1=None, arg2=None, arg3=None):
         current_recipient = prof.get_current_recipient()
 
         if not current_recipient and arg2 != current_recipient:
-            plugin_logger.info('Opening Chat Window for {0}'.format(arg2))
+            log.info('Opening Chat Window for {0}'.format(arg2))
             prof.send_line('/msg {0}'.format(arg2))
 
         recipient = arg2 or current_recipient
         if recipient:
-            plugin_logger.info('Start OMEMO session with: {0}'.format(recipient))
+            log.info('Start OMEMO session with: {0}'.format(recipient))
             _start_omemo_session(recipient)
 
     elif arg1 == 'end':
         # ensure we are in a chat window
         jid = arg2 or prof.get_current_muc() or prof.get_current_recipient()
-        plugin_logger.info('Ending OMEMO session with: {0}'.format(jid))
+        log.info('Ending OMEMO session with: {0}'.format(jid))
         if jid:
             _end_omemo_session(jid)
 
@@ -414,7 +415,7 @@ def _parse_args(arg1=None, arg2=None, arg3=None):
 
 
 def prof_init(version, status, account_name, fulljid):
-    plugin_logger.info('prof_init() called')
+    log.info('prof_init() called')
     synopsis = [
         '/omemo',
         '/omemo on|off',
@@ -453,25 +454,25 @@ def prof_init(version, status, account_name, fulljid):
         ProfOmemoUser.set_user(account_name, fulljid)
         _init_omemo()
     else:
-        plugin_logger.warning('No User logged in on plugin.prof_init()')
+        log.warning('No User logged in on plugin.prof_init()')
 
 
 def prof_on_unload():
-    plugin_logger.debug('prof_on_unload() called')
+    log.debug('prof_on_unload() called')
     ProfOmemoUser.reset()
 
 
 def prof_on_connect(account_name, fulljid):
-    plugin_logger.debug('prof_on_connect() called')
+    log.debug('prof_on_connect() called')
     ProfOmemoUser.set_user(account_name, fulljid)
     _init_omemo()
 
 
 def prof_on_disconnect(account_name, fulljid):
-    plugin_logger.debug('prof_on_disconnect() called')
+    log.debug('prof_on_disconnect() called')
     ProfOmemoUser.reset()
 
 
 def prof_on_shutdown():
-    plugin_logger.debug('prof_on_shutdown() called')
+    log.debug('prof_on_shutdown() called')
     ProfOmemoUser.reset()
