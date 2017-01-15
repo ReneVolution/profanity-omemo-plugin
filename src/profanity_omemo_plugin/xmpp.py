@@ -226,7 +226,7 @@ def unpack_encrypted_stanza(encrypted_stanza):
     keys = {}
     for node in header_node.iter():
         if node.tag == '{%s}key' % NS_OMEMO:
-            keys[int(node.attrib['rid'])] = node.text
+            keys[int(node.attrib['rid'])] = b64decode(node.text)
 
     msg_dict = {
         'sender_jid': sender,
