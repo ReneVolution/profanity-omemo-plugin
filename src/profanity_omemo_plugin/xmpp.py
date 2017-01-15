@@ -52,9 +52,6 @@ def encrypt_stanza(stanza):
 
 
 def update_devicelist(account, recipient, devices):
-    # TODO: Call setActiveState with received devicelist
-    # see https://dev.gajim.org/gajim/gajim-plugins/blob/master/omemo/omemoplugin.py#L1060-1096
-    # and https://dev.gajim.org/gajim/gajim-plugins/blob/master/omemo/omemoplugin.py#L706-792
     omemo_state = ProfOmemoState()
 
     if devices:
@@ -66,6 +63,7 @@ def update_devicelist(account, recipient, devices):
             logger.info('Adding recipients devices')
             omemo_state.set_devices(recipient, devices)
 
+        omemo_state.store.sessionStore.setActiveState(devices, account)
         logger.info('Device List update done.')
 
 
