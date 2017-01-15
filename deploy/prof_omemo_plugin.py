@@ -357,19 +357,23 @@ def _parse_args(arg1=None, arg2=None, arg3=None):
 
     if arg1 == 'on':
         _set_omemo_enabled_setting(True)
+
     elif arg1 == 'off':
         _set_omemo_enabled_setting(False)
+
     elif arg1 == 'start':
         # ensure we are in a chat window
-        jid = prof.get_current_muc() or prof.get_current_recipient()
 
-        if arg2 and arg2 != jid:
+        current_recipient = prof.get_current_recipient()
+
+        if not current_recipient and arg2 != current_recipient:
             plugin_logger.info('Opening Chat Window for {0}'.format(arg2))
             prof.send_line('/msg {0}'.format(arg2))
 
-        plugin_logger.info('Start OMEMO session with: {0}'.format(jid))
-        if jid:
-            _start_omemo_session(jid)
+        recipient = arg2 or current_recipient
+        if recipient:
+            plugin_logger.info('Start OMEMO session with: {0}'.format(recipient))
+            _start_omemo_session(recipient)
 
     elif arg1 == 'set':
         if arg2 == 'message_prefix':
