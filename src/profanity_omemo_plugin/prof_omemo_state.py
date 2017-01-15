@@ -18,6 +18,8 @@
 # the Profanity OMEMO plugin.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import prof
+
 from db import get_connection
 from log import get_plugin_logger
 
@@ -57,35 +59,43 @@ class ProfOmemoState(object):
 
 class ProfActiveOmemoChats(object):
 
-    __sessions = {}
+    __active = set()
 
     @classmethod
-    def sessions(cls):
-        return cls.__sessions
+    def active(cls):
+        return cls.__active
 
     @classmethod
-    def add(cls, jid, session):
-        account = jid.rsplit('/', 1)[0]
-        cls.__sessions[account] = session
+    def add(cls, contact_jid):
+        raw_jid = cls.as_raw_jid(contact_jid)
+        cls.__active.add(raw_jid)
+        prof.log_info('Added {0} to active chats'.format(raw_jid))
 
     @classmethod
-    def remove(cls, account):
+    def remove(cls, contact_jid):
+        raw_jid = cls.as_raw_jid(contact_jid)
         try:
-            del cls.__sessions[account]
+            cls.__active.remove(raw_jid)
         except KeyError:
-            logger.warning('Tried to delete an unknown session.')
+            pass
 
     @classmethod
-    def get_session(cls, account):
-        return cls.__sessions.get(account)
-
-    @classmethod
-    def has_session(cls, account):
-        return account in cls.__sessions.keys()
+    def account_is_active(cls, contact_jid):
+        raw_jid = cls.as_raw_jid(contact_jid)
+        prof.log_info('Active Chats: [{0}]'.format(', '.join(cls.active())))
+        return raw_jid in cls.active()
 
     @classmethod
     def reset(cls):
-        cls.__sessions = {}
+        cls.__active = set()
+
+    @staticmethod
+    def as_raw_jid(contact_jid):
+        raw_jid = None
+        if contact_jid:
+            raw_jid = contact_jid.rsplit('/', 1)[0]
+
+        return raw_jid
 
 
 class ProfOmemoUser(object):

@@ -232,9 +232,10 @@ def unpack_encrypted_stanza(encrypted_stanza):
         'sender_jid': sender,
         'sender_resource': resource,
         'sid': sid,
-        'iv': iv,
+        'iv': b64decode(iv),
         'keys': keys,
-        'payload': payload}
+        'payload': b64decode(payload)
+    }
 
     return msg_dict
 
@@ -255,8 +256,8 @@ def unpack_devicelist_info(stanza):
             # device list info is result of a request for our own account
             sender_jid = ProfOmemoUser().account
 
-    item_list = xml.find('.//{%s}list' % NS_OMEMO) or []
-    if len(item_list) > 0:
+    item_list = xml.find('.//{%s}list' % NS_OMEMO)
+    if item_list is not None:
         device_ids = [int(d.attrib['id']) for d in list(item_list)]
     else:
         device_ids = []

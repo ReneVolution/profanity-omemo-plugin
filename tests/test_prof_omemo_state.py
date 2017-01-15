@@ -86,10 +86,10 @@ class TestProfOmemoUtils(object):
 
         new_omemo_session = ProfActiveOmemoChats()
 
-        assert omemo_session.sessions() == new_omemo_session.sessions()
+        assert omemo_session.active() == new_omemo_session.active()
 
     def test_omemo_sessions_has_no_session_for_user(self):
-        assert ProfActiveOmemoChats.has_session('youdontknowme@web.io') is False
+        assert ProfActiveOmemoChats.account_is_active('youdontknowme@web.io') is False
 
     def test_omemo_session_finds_existing_session(self):
         account = 'juliet@capulet.lit'
@@ -97,7 +97,7 @@ class TestProfOmemoUtils(object):
 
         ProfActiveOmemoChats.add(account, session)
 
-        assert ProfActiveOmemoChats.has_session(account) is True
+        assert ProfActiveOmemoChats.account_is_active(account) is True
 
     def test_omemo_session_remove_session(self):
         account = 'juliet@capulet.lit'
@@ -105,11 +105,11 @@ class TestProfOmemoUtils(object):
 
         ProfActiveOmemoChats.add(account, session)
 
-        assert ProfActiveOmemoChats.has_session(account) is True
+        assert ProfActiveOmemoChats.account_is_active(account) is True
 
         ProfActiveOmemoChats.remove(account)
 
-        assert ProfActiveOmemoChats.has_session(account) is False
+        assert ProfActiveOmemoChats.account_is_active(account) is False
 
     def test_omemo_new_session_overwrites_old_session(self):
         jid = 'juliet@capulet.lit/conversations'
@@ -122,7 +122,7 @@ class TestProfOmemoUtils(object):
         new_session = 'DHEWVFHVWEKBFVWKJCBELJBVEJLWBVJLWBVJWEB'
         ProfActiveOmemoChats.add(account, new_session)
 
-        assert len(ProfActiveOmemoChats.sessions()) == 1
+        assert len(ProfActiveOmemoChats.active()) == 1
         assert ProfActiveOmemoChats.get_session(account) == new_session
 
     def test_omemo_reset_prof_omemo_sessions(self):
@@ -131,14 +131,14 @@ class TestProfOmemoUtils(object):
 
         ProfActiveOmemoChats.add(jid, session)
 
-        assert len(ProfActiveOmemoChats.sessions()) == 1
+        assert len(ProfActiveOmemoChats.active()) == 1
 
         ProfActiveOmemoChats.reset()
 
-        assert len(ProfActiveOmemoChats.sessions()) == 0
+        assert len(ProfActiveOmemoChats.active()) == 0
 
     def test_omemo_has_none_session(self):
         account = 'juliet@capulet.lit'
         ProfActiveOmemoChats.add(account, None)
 
-        assert ProfActiveOmemoChats.has_session(account) is True
+        assert ProfActiveOmemoChats.account_is_active(account) is True
