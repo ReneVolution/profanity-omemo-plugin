@@ -375,17 +375,17 @@ def _parse_args(arg1=None, arg2=None, arg3=None):
             plugin_logger.info('Start OMEMO session with: {0}'.format(recipient))
             _start_omemo_session(recipient)
 
-    elif arg1 == 'set':
-        if arg2 == 'message_prefix':
-            if arg3 is not None:
-                _set_omemo_decrypted_message_prefix(arg3)
-
     elif arg1 == 'end':
         # ensure we are in a chat window
         jid = arg2 or prof.get_current_muc() or prof.get_current_recipient()
         plugin_logger.info('Ending OMEMO session with: {0}'.format(jid))
         if jid:
             _end_omemo_session(jid)
+
+    elif arg1 == 'set':
+        if arg2 == 'message_prefix':
+            if arg3 is not None:
+                _set_omemo_decrypted_message_prefix(arg3)
 
     elif arg1 == 'account':
         prof.cons_show('Account: {0}'.format(account))
