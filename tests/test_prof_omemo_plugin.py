@@ -86,7 +86,7 @@ class TestPluginHooks(object):
 
         recipient = 'juliet@capulet.lit'
 
-        ProfActiveOmemoChats.add(recipient, None)
+        ProfActiveOmemoChats.add(recipient)
 
         stanza = '<message to="{}"></message>'.format(recipient)
 
@@ -124,7 +124,7 @@ class TestPluginHooks(object):
             return x
 
         recipient = 'juliet@capulet.lit'
-        ProfActiveOmemoChats.add(recipient, 'SOMEMAGICKEY')
+        ProfActiveOmemoChats.add(recipient)
 
         stanza = '<message to="{}"></message>'.format(recipient)
 
@@ -161,7 +161,7 @@ class TestPluginHooks(object):
 
         settings_boolean_get.return_value = True
         recipient = 'juliet@capulet.lit'
-        ProfActiveOmemoChats.add(recipient, 'SOMEMAGICKEY')
+        ProfActiveOmemoChats.add(recipient)
 
         stanza = '<message to="{}"></message>'.format(recipient)
 
