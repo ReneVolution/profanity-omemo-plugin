@@ -57,7 +57,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     data_files=[('profanity_omemo_plugin', ['deploy/prof_omemo_plugin.py'])],
-    install_requires=['python-omemo==0.1.0'],
+    install_requires=['protobuf>=3.0.0b2,<3.2', 'python-omemo==0.1.0'],
     setup_requires=['pytest-runner'],
     tests_require=['pytest', 'mock'],
     dependency_links=['git+https://github.com/lovetox/python-omemo.git@new#egg=python-omemo-0.1.0'],  # noqa
