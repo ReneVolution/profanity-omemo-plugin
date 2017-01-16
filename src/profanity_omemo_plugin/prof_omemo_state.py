@@ -23,7 +23,7 @@ import prof
 from db import get_connection
 from log import get_plugin_logger
 
-logger = get_plugin_logger()
+logger = get_plugin_logger(__name__)
 
 try:
     from omemo.state import OmemoState

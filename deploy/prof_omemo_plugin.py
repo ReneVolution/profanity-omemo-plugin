@@ -33,7 +33,7 @@ from profanity_omemo_plugin.prof_omemo_state import (ProfOmemoState,
                                                      ProfOmemoUser,
                                                      ProfActiveOmemoChats)
 
-log = get_plugin_logger()
+log = get_plugin_logger(__name__)
 
 
 ################################################################################
@@ -96,6 +96,9 @@ def require_sessions_for_all_devices(attrib, else_return=None):
             log.info('Checking Sessions for {0}'.format(recipient))
             state = ProfOmemoState()
             uninitialized_devices = state.devices_without_sessions(contat_jid)
+            own_uninitialized = state.devices_without_sessions(ProfOmemoUser.account)
+
+            uninitialized_devices += own_uninitialized
 
             if not uninitialized_devices:
                 log.info('Recipient {0} has all sessions set up.'.format(recipient))
@@ -271,6 +274,19 @@ def prof_pre_chat_message_send(barejid, message):
 
         for device in uninitialzed_devices:
             _query_bundle_info_for(barejid, device)
+
+    own_jid = ProfOmemoUser.account
+    own_uninitialized = omemo_state.devices_without_sessions(own_jid)
+
+    if own_uninitialized:
+        d_str = ', '.join([str(d) for d in own_uninitialized])
+        msg = 'Requesting own bundles for missing devices {0}'.format(d_str)
+
+        log.info(msg)
+        prof.notify(msg, 5000, 'Profanity Omemo Plugin')
+
+        for device in own_uninitialized:
+            _query_bundle_info_for(own_jid, device)
 
     return message
 

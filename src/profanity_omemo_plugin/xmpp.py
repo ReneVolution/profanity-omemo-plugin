@@ -32,7 +32,7 @@ except ImportError:
     # fallback to the default ElementTree module
     import xml.etree.ElementTree as ET
 
-logger = get_plugin_logger()
+logger = get_plugin_logger(__name__)
 
 
 ################################################################################
@@ -135,7 +135,12 @@ def unpack_bundle_info(stanza):
     logger.info('Unwrapping bundle info.')
     bundle_xml = ET.fromstring(stanza)
 
-    sender = bundle_xml.attrib['from'].rsplit('/', 1)[0]
+    try:
+        sender = bundle_xml.attrib['from'].rsplit('/', 1)[0]
+    except KeyError:
+        # we assume bundle updates without sender to be own bundles for
+        # different devices
+        sender = ProfOmemoUser.account
 
     items_node = bundle_xml.find(
         './/{%s}items' % 'http://jabber.org/protocol/pubsub')
