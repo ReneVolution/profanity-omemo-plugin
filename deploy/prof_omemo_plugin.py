@@ -96,7 +96,9 @@ def require_sessions_for_all_devices(attrib, else_return=None):
             log.info('Checking Sessions for {0}'.format(recipient))
             state = ProfOmemoState()
             uninitialized_devices = state.devices_without_sessions(contat_jid)
-            own_uninitialized = state.devices_without_sessions(ProfOmemoUser.account)
+
+            own_jid = ProfOmemoUser.account
+            own_uninitialized = state.devices_without_sessions(own_jid)
 
             uninitialized_devices += own_uninitialized
 
@@ -105,6 +107,7 @@ def require_sessions_for_all_devices(attrib, else_return=None):
                 return func(stanza)
 
             _query_device_list(contat_jid)
+            _query_device_list(own_jid)
             log.warning('No Session found for user: {0}.'.format(recipient))
             prof.notify('Failed to send last Message.', 5000, 'Profanity Omemo Plugin')
             return else_return
@@ -163,7 +166,7 @@ def _start_omemo_session(jid):
     # sending OMEMO messages and fail if no session was created then.
     ProfActiveOmemoChats.add(jid)
 
-    log.debug('Query Devicelist for {0}'.format(jid))
+    log.info('Query Devicelist for {0}'.format(jid))
     _query_device_list(jid)
 
 
@@ -200,14 +203,13 @@ def _handle_bundle_update(stanza):
 
     try:
         omemo_state.build_session(sender, device_id, bundle_info)
+        log.info('Session built with user: {0}:{1}'.format(sender, device_id))
         prof.completer_add('/omemo end', [sender])
     except Exception as e:
         msg_tmpl = 'Could not build session with {0}:{1}. {2}:{3}'
-        msg = msg_tmpl.format(sender, device_id, e.__class__.__name__, str(e))
+        msg = msg_tmpl.format(sender, device_id, type(e).__name__, str(e))
         log.error(msg)
         return
-
-    log.info('Session built with user: {0} '.format(sender))
 
 
 def _announce_own_devicelist():
@@ -343,8 +345,8 @@ def prof_on_iq_stanza_receive(stanza):
     log.info('Received IQ: {0}'.format(stanza))
 
     if xmpp.is_bundle_update(stanza):  # bundle information received
-        _handle_bundle_update(stanza)
         log.info('Bundle update detected.')
+        _handle_bundle_update(stanza)
         return False
 
     elif xmpp.is_devicelist_update(stanza):
