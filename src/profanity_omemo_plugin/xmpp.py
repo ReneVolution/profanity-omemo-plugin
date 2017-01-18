@@ -54,8 +54,8 @@ def encrypt_stanza(stanza):
 def update_devicelist(account, recipient, devices):
     omemo_state = ProfOmemoState()
 
+    logger.info('Adding Device ID\'s: {0} for {1}.'.format(devices, recipient))
     if devices:
-        logger.info('Adding Device ID\'s: {0} for {1}.'.format(devices, recipient))
         if account == recipient:
             logger.info('Adding own devices')
             omemo_state.set_own_devices(devices)
@@ -261,7 +261,7 @@ def unpack_devicelist_info(stanza):
 
     item_list = xml.find('.//{%s}list' % NS_OMEMO)
     if item_list is not None:
-        device_ids = [int(d.attrib['id']) for d in list(item_list)]
+        device_ids = [int(d.attrib['id']) for d in item_list]
     else:
         device_ids = []
 
@@ -361,21 +361,22 @@ def create_encrypted_message(from_jid, to_jid, plaintext, msg_id=None):
                  '</message>')
 
     omemo_state = ProfOmemoState()
-    msg_dict = omemo_state.create_msg(from_jid, to_jid, plaintext)
+    account = ProfOmemoUser.account
+    msg_data = omemo_state.create_msg(account, to_jid, plaintext)
 
     # build encrypted message from here
     keys_tpl = '<key rid="{0}">{1}</key>'
-    keys_dict = msg_dict['keys']
+    keys_dict = msg_data['keys']
     keys_str = ''.join([keys_tpl.format(rid, b64encode(key)) for rid, key in keys_dict.iteritems()])
 
     msg_dict = {'to': to_jid,
                 'from': from_jid,
                 'id': msg_id or str(uuid.uuid4()),
                 'omemo_ns': NS_OMEMO,
-                'sid': msg_dict['sid'],
+                'sid': msg_data['sid'],
                 'keys': keys_str,
-                'iv': b64encode(msg_dict['iv']),
-                'enc_body': b64encode(msg_dict['payload'])}
+                'iv': b64encode(msg_data['iv']),
+                'enc_body': b64encode(msg_data['payload'])}
 
     enc_msg = OMEMO_MSG.format(**msg_dict)
 
@@ -397,8 +398,8 @@ def create_devicelist_update_msg(fulljid):
 
     omemo_state = ProfOmemoState()
 
-    # TODO: This looks weird - there could be more than one device id
-    device_nodes = ['<device id="{0}"/>'.format(d) for d in [omemo_state.own_device_id]]
+    own_devices = set(omemo_state.own_devices + [omemo_state.own_device_id])
+    device_nodes = ['<device id="{0}"/>'.format(d) for d in own_devices]
 
     msg_dict = {'from': fulljid,
                 'devices': ''.join(device_nodes),

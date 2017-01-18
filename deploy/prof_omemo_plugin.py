@@ -120,11 +120,11 @@ def omemo_enabled(else_return=None):
     def wrapper(func):
         @wraps(func)
         def func_wrapper(*args, **kwargs):
-            log.info('Check if Plugins is enabled')
+            log.debug('Check if Plugins is enabled')
             enabled = _get_omemo_enabled_setting()
 
             if enabled is True:
-                log.info('Plugin is enabled')
+                log.debug('Plugin is enabled')
                 return func(*args, **kwargs)
 
             return else_return
@@ -179,12 +179,18 @@ def _end_omemo_session(jid):
 ################################################################################
 
 def _handle_devicelist_update(stanza):
-    account = ProfOmemoUser().account
+    own_jid = ProfOmemoUser().account
     msg_dict = xmpp.unpack_devicelist_info(stanza)
     sender_jid = msg_dict['from']
-    xmpp.update_devicelist(account, sender_jid, msg_dict['devices'])
+    log.info('Received devicelist update from {0}'.format(sender_jid))
+    xmpp.update_devicelist(own_jid, sender_jid, msg_dict['devices'])
 
-    add_recipient_to_completer(sender_jid)
+    omemo_state = ProfOmemoState()
+    if not omemo_state.own_device_id_published():
+        _announce_own_devicelist()
+
+    if sender_jid != own_jid:
+        add_recipient_to_completer(sender_jid)
 
 
 def add_recipient_to_completer(recipient):
@@ -216,6 +222,7 @@ def _announce_own_devicelist():
     fulljid = ProfOmemoUser().fulljid
     query_msg = xmpp.create_devicelist_update_msg(fulljid)
     log.info('Announce own device list.')
+    log.info(query_msg)
     send_stanza(query_msg)
 
 
@@ -227,6 +234,7 @@ def _query_bundle_info_for(recipient, deviceid):
 
 
 def _query_device_list(contact_jid):
+    log.info('Query Device list for {0}'.format(contact_jid))
     fulljid = ProfOmemoUser().fulljid
     query_msg = xmpp.create_devicelist_query_msg(fulljid, contact_jid)
     send_stanza(query_msg)
@@ -242,7 +250,7 @@ def prof_on_message_stanza_send(stanza):
     # TODO: Should we ensure all devices have sessions before we encrypt???
     contact_jid = xmpp.get_recipient(stanza)
     if not ProfActiveOmemoChats.account_is_active(contact_jid):
-        prof.log_info('Chat not activated for {0}'.format(contact_jid))
+        log.info('Chat not activated for {0}'.format(contact_jid))
         return None
 
     if xmpp.is_xmpp_plaintext_message(stanza):
@@ -261,7 +269,7 @@ def prof_pre_chat_message_send(barejid, message):
     """
 
     if not ProfActiveOmemoChats.account_is_active(barejid):
-        prof.log_info('Chat not activated for {0}'.format(barejid))
+        log.info('Chat not activated for {0}'.format(barejid))
         return None
 
     omemo_state = ProfOmemoState()

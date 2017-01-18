@@ -22,7 +22,6 @@ import prof
 
 from db import get_connection
 from log import get_plugin_logger
-
 logger = get_plugin_logger(__name__)
 
 try:
@@ -38,6 +37,11 @@ except ImportError:
     raise
 
 
+class DummyPLugin(object):
+    def publish_bundle(self, account):
+        pass
+
+
 class ProfOmemoState(object):
     """ ProfOmemoState Singleton """
 
@@ -51,7 +55,7 @@ class ProfOmemoState(object):
         if own_jid not in cls.__states:
             # create the OmemoState for the current user
             connection = get_connection(own_jid)
-            new_state = OmemoState(own_jid, connection, own_jid, None)
+            new_state = OmemoState(own_jid, connection, own_jid, DummyPLugin())
             cls.__states[own_jid] = new_state
 
         return cls.__states[own_jid]
