@@ -18,9 +18,14 @@ After installing you have to enable the plugin inside profanity with `/plugins l
 
 ## Usage
 
-`/omemo status` => Displays the current status in profanity's console window
-`/omemo start [contact jid]` => Starts a new conversation with the given contact, if not given, the one in the current chat
-`/omemo end [contact jid]` => Ends the conversation with the given contact jid or, if not given, the one in the current chat 
+`/omemo status` </br>
+Displays the current status in profanity's console window
+
+`/omemo start [contact jid]` </br>
+Starts a new conversation with the given contact, if not given, the one in the current chat
+
+`/omemo end [contact jid]` </br>
+Ends the conversation with the given contact jid or, if not given, the one in the current chat 
 
 ## TODO
 
