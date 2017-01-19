@@ -1,17 +1,31 @@
 
-[![Project Status](https://img.shields.io/badge/Project%20Status-Under%20Heavy%20Development-red.svg)](https://github.com/ReneVolution/profanity-omemo-plugin)
+[![Project Status](https://img.shields.io/badge/Project%20Status-Early%20Beta-red.svg)](https://github.com/ReneVolution/profanity-omemo-plugin)
 [![Build Status](https://travis-ci.org/ReneVolution/profanity-omemo-plugin.svg?branch=master)](https://travis-ci.org/ReneVolution/profanity-omemo-plugin)
 [![Coverage Status](https://coveralls.io/repos/github/ReneVolution/profanity-omemo-plugin/badge.svg?branch=master)](https://coveralls.io/github/ReneVolution/profanity-omemo-plugin?branch=master)
 [![Say Thanks](https://img.shields.io/badge/SayThanks.io-%E2%98%BC-1EAEDB.svg)](https://saythanks.io/to/ReneVolution)
+
+
 
 # profanity-omemo-plugin  [![OMEMO Logo](./docs/images/omemo.png)](https://saythanks.io/to/ReneVolution)
 
 A Python plugin to use (axolotl / Signal Protocol) encryption for the profanity XMPP messenger
 
 
-## Disclaimer
+## Installation
 
-This Plugin is still under development and is not in stage yet where it can be of any use.
-Please feel free to send any Pull-Requests and optimisations in code anyway.
+The easiest way to install the plugin is to use the provided `install.sh` script in this repository.
+After installing you have to enable the plugin inside profanity with `/plugins load prof_omemo_plugin.py`.
 
-As my time is currently very limited, i still will try to work further on it.
+## Usage
+
+`/omemo status` => Displays the current status in profanity's console window
+`/omemo start [contact jid]` => Starts a new conversation with the given contact, if not given, the one in the current chat
+`/omemo end [contact jid]` => Ends the conversation with the given contact jid or, if not given, the one in the current chat 
+
+## TODO
+
+- [ ] Documentation
+- [ ] Handle messages from own devices
+- [ ] Trust Management
+- [ ] Write more tests
+
