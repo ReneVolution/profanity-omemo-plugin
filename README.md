@@ -18,6 +18,9 @@ After installing you have to enable the plugin inside profanity with `/plugins l
 
 ## Usage
 
+`/omemo (on|off)` </br>
+Turns on/off the usage of the plugin while it may be still loaded in profanity. (Default=ON)
+
 `/omemo status` </br>
 Displays the current status in profanity's console window
 
