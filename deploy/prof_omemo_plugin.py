@@ -326,7 +326,7 @@ def prof_on_message_stanza_receive(stanza):
                 plain_msg = omemo_state.decrypt_msg(msg_dict)
             except Exception as e:
                 msg = u'Could not decrypt Messages. {0}: {1}'
-                log.error(msg.format(e.__class__.__name__, str(e)))
+                log.error(msg.format(e.__class__.__name__, e.message))
                 return False
 
             if plain_msg is None:
@@ -342,7 +342,7 @@ def prof_on_message_stanza_receive(stanza):
 
         except Exception as e:
             # maybe not OMEMO encrypted, profanity will take care then
-            log.error('Could not decrypt message. {0}'.format(str(e)))
+            log.error('Could not handle encrypted message. {0}'.format(str(e)))
 
     return True
 

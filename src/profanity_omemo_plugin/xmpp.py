@@ -211,6 +211,9 @@ def unpack_encrypted_stanza(encrypted_stanza):
     """
 
     xml = ET.fromstring(encrypted_stanza)
+    if '<forwarded' in encrypted_stanza:
+        xml = xml.find('.//{jabber:client}message')
+
     sender_fulljid = xml.attrib['from']
     sender, resource = sender_fulljid.rsplit('/', 1)
 
