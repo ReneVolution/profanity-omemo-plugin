@@ -6,7 +6,7 @@
 
 
 
-# profanity-omemo-plugin  [![OMEMO Logo](./docs/images/omemo.png)](https://saythanks.io/to/ReneVolution)
+# profanity-omemo-plugin  [![OMEMO Logo](./docs/images/omemo.png)](https://conversations.im/omemo/)
 
 A Python plugin to use (axolotl / Signal Protocol) encryption for the profanity XMPP messenger
 
