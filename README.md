@@ -11,6 +11,17 @@
 
 A Python plugin to use (axolotl / Signal Protocol) encryption for the profanity XMPP messenger
 
+## Requirements
+
+This Plugin requires the ProfanityIM Messenger to be compiled with Python 2.7 
+(_Python 3 is not supported yet._) Plugin Support. 
+Please make sure to match the Plugin-Host requirements from the table below.
+
+| Pugin  | Profanity |
+|-------------|----------------|
+| master | master |
+| v0.1.0 | >= v0.5.0 |
+
 
 ## Installation
 
