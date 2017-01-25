@@ -17,11 +17,14 @@
 # You should have received a copy of the GNU General Public License along with
 # the Profanity OMEMO plugin.  If not, see <http://www.gnu.org/licenses/>.
 #
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import prof
 
-from db import get_connection
-from log import get_plugin_logger
+from profanity_omemo_plugin.db import get_connection
+from profanity_omemo_plugin.log import get_plugin_logger
+
 logger = get_plugin_logger(__name__)
 
 try:

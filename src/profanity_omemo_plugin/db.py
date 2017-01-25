@@ -18,10 +18,13 @@
 # the Profanity OMEMO plugin.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import os
 
-from constants import XDG_DATA_HOME
-from log import get_plugin_logger
+from profanity_omemo_plugin.constants import XDG_DATA_HOME
+from profanity_omemo_plugin.log import get_plugin_logger
 
 log = get_plugin_logger(__name__)
 

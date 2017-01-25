@@ -18,6 +18,8 @@
 # the Profanity OMEMO plugin.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from __future__ import unicode_literals
+
 import os
 
 HOME = os.path.expanduser('~')
@@ -26,7 +28,7 @@ XDG_DATA_HOME = os.environ.get('XDG_DATA_HOME', os.path.join(HOME, '.local', 'sh
 LOGGER_NAME = 'ProfOmemoLogger'
 SETTINGS_GROUP = 'omemo'
 OMEMO_DEFAULT_ENABLED = True
-OMEMO_DEFAULT_MESSAGE_PREFIX = u'[*OMEMO*]'
+OMEMO_DEFAULT_MESSAGE_PREFIX = '[*OMEMO*]'
 
 # OMEMO namespace constants
 NS_OMEMO = 'eu.siacs.conversations.axolotl'

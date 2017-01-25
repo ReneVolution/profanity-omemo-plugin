@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from codecs import open
 from glob import glob
 from os import path
@@ -20,7 +22,7 @@ class CustomInstallCommand(install):
         install.do_egg_install(self)
 
         # Install the actual profanity-omemo.py to the profanity plugins folder.
-        print "do post install stuff here..."
+        print('do post install stuff here...')
 
 
 setup(

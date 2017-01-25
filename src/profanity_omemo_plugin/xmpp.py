@@ -17,14 +17,16 @@
 # You should have received a copy of the GNU General Public License along with
 # the Profanity OMEMO plugin.  If not, see <http://www.gnu.org/licenses/>.
 #
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import random
 import uuid
 from base64 import b64decode, b64encode
 
-from constants import NS_OMEMO, NS_DEVICE_LIST, NS_DEVICE_LIST_NOTIFY, NS_BUNDLES
-from log import get_plugin_logger
-from prof_omemo_state import ProfOmemoState, ProfOmemoUser
+from profanity_omemo_plugin.constants import NS_OMEMO, NS_DEVICE_LIST, NS_DEVICE_LIST_NOTIFY, NS_BUNDLES
+from profanity_omemo_plugin.log import get_plugin_logger
+from profanity_omemo_plugin.prof_omemo_state import ProfOmemoState, ProfOmemoUser
 
 try:
     from lxml import etree as ET
@@ -370,7 +372,7 @@ def create_encrypted_message(from_jid, to_jid, plaintext, msg_id=None):
     # build encrypted message from here
     keys_tpl = '<key rid="{0}">{1}</key>'
     keys_dict = msg_data['keys']
-    keys_str = ''.join([keys_tpl.format(rid, b64encode(key)) for rid, key in keys_dict.iteritems()])
+    keys_str = ''.join([keys_tpl.format(rid, b64encode(key)) for rid, key in keys_dict.items()])
 
     msg_dict = {'to': to_jid,
                 'from': from_jid,

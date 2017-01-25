@@ -18,6 +18,8 @@
 # the Profanity OMEMO plugin.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from __future__ import unicode_literals
+
 import logging
 
 PROFANITY_IS_HOST = True
@@ -34,9 +36,9 @@ class ProfLogHandler(logging.Handler):
         super(ProfLogHandler, self).__init__()
 
         if prefix:
-            fmt_str = u'{0} - %(message)s'.format(prefix)
+            fmt_str = '{0} - %(message)s'.format(prefix)
         else:
-            fmt_str = u'%(name)s - %(message)s'
+            fmt_str = '%(name)s - %(message)s'
 
         self.prof_formatter = logging.Formatter(fmt_str)
         self.setFormatter(self.prof_formatter)
@@ -54,7 +56,7 @@ class ProfLogHandler(logging.Handler):
             try:
                 level_fn_map[record.levelno](self.format(record))
             except Exception as e:
-                prof.log_error(u'Could not log last message. {0}'.format(str(e)))
+                prof.log_error('Could not log last message. {0}'.format(e.message))
 
 
 python_omemo_logger = logging.getLogger('omemo')

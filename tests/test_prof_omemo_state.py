@@ -8,7 +8,7 @@ from profanity_omemo_plugin.prof_omemo_state import ProfOmemoUser, \
 
 
 def get_test_db_connection():
-    print "Using In-Memory Database"
+    print('Using In-Memory Database')
     return sqlite3.connect(':memory:', check_same_thread=False)
 
 
