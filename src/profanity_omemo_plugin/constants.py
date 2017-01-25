@@ -28,7 +28,7 @@ XDG_DATA_HOME = os.environ.get('XDG_DATA_HOME', os.path.join(HOME, '.local', 'sh
 LOGGER_NAME = 'ProfOmemoLogger'
 SETTINGS_GROUP = 'omemo'
 OMEMO_DEFAULT_ENABLED = True
-OMEMO_DEFAULT_MESSAGE_PREFIX = '[*OMEMO*]'
+OMEMO_DEFAULT_MESSAGE_CHAR = '@'
 
 # OMEMO namespace constants
 NS_OMEMO = 'eu.siacs.conversations.axolotl'

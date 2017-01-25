@@ -19,6 +19,9 @@
 #
 
 # This file will be copied to the profanity plugins install location
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 from functools import wraps
 
 import prof
@@ -27,7 +30,7 @@ import profanity_omemo_plugin.xmpp as xmpp
 from profanity_omemo_plugin.constants import (NS_DEVICE_LIST_NOTIFY,
                                               SETTINGS_GROUP,
                                               OMEMO_DEFAULT_ENABLED,
-                                              OMEMO_DEFAULT_MESSAGE_PREFIX)
+                                              OMEMO_DEFAULT_MESSAGE_CHAR)
 from profanity_omemo_plugin.log import get_plugin_logger
 from profanity_omemo_plugin.prof_omemo_state import (ProfOmemoState,
                                                      ProfOmemoUser,
@@ -66,16 +69,16 @@ def _set_omemo_enabled_setting(enabled):
     prof.settings_boolean_set(SETTINGS_GROUP, 'enabled', enabled)
 
 
-def _get_omemo_decrypted_message_prefix():
+def _get_omemo_message_char():
     return prof.settings_string_get(
-        SETTINGS_GROUP, 'message_prefix', OMEMO_DEFAULT_MESSAGE_PREFIX)
+        SETTINGS_GROUP, 'message_char', OMEMO_DEFAULT_MESSAGE_CHAR)
 
 
-def _set_omemo_decrypted_message_prefix(prefix):
-    msg = 'OMEMO Message Prefix: {0}'.format(prefix)
+def _set_omemo_message_char(char):
+    msg = 'OMEMO Message Prefix: {0}'.format(char)
     log.debug(msg)
     prof.cons_show(msg)
-    prof.settings_string_set(SETTINGS_GROUP, 'message_prefix', prefix)
+    prof.settings_string_set(SETTINGS_GROUP, 'message_char', char)
 
 
 ################################################################################
@@ -166,12 +169,27 @@ def _start_omemo_session(jid):
     # sending OMEMO messages and fail if no session was created then.
     ProfActiveOmemoChats.add(jid)
 
+    # ensure we have no running OTR session
+    prof.encryption_reset(jid)
+
+    # Visualize that OMEMO is now running
+    prof.chat_set_titlebar_enctext(jid, 'OMEMO')
+
+    message_char = _get_omemo_message_char()
+    prof.chat_set_outgoing_char(jid, message_char)
+
     log.info('Query Devicelist for {0}'.format(jid))
     _query_device_list(jid)
 
 
 def _end_omemo_session(jid):
     ProfActiveOmemoChats.remove(jid)
+
+    # Release OMEMO from titlebar
+    prof.chat_unset_titlebar_enctext(jid)
+
+    prof.chat_unset_incoming_char(jid)
+    prof.chat_unset_outgoing_char(jid)
 
 
 ################################################################################
@@ -325,7 +343,7 @@ def prof_on_message_stanza_receive(stanza):
             try:
                 plain_msg = omemo_state.decrypt_msg(msg_dict)
             except Exception as e:
-                msg = u'Could not decrypt Messages. {0}: {1}'
+                msg = 'Could not decrypt Messages. {0}: {1}'
                 log.error(msg.format(e.__class__.__name__, e.message))
                 return False
 
@@ -334,10 +352,13 @@ def prof_on_message_stanza_receive(stanza):
                 return True
 
             if plain_msg:
-                prefix = _get_omemo_decrypted_message_prefix()
-                log.info(u'Appending Message Prefix {0}'.format(prefix))
-                prefixed_msg = u'{0} {1}'.format(prefix, plain_msg)
-                prof.incoming_message(sender, resource, prefixed_msg)
+                # only mark the message if it was an OMEMO encrypted message
+                try:
+                    message_char = _get_omemo_message_char()
+                    prof.chat_set_incoming_char(sender, message_char)
+                    prof.incoming_message(sender, resource, plain_msg)
+                finally:
+                    prof.chat_unset_incoming_char(sender)
             return False
 
         except Exception as e:
@@ -412,7 +433,7 @@ def _parse_args(arg1=None, arg2=None, arg3=None):
     elif arg1 == 'set':
         if arg2 == 'message_prefix':
             if arg3 is not None:
-                _set_omemo_decrypted_message_prefix(arg3)
+                _set_omemo_message_char(arg3)
 
     elif arg1 == 'account':
         prof.cons_show('Account: {0}'.format(account))
