@@ -9,7 +9,7 @@
 
 # profanity-omemo-plugin  [![OMEMO Logo](./docs/images/omemo.png)](https://conversations.im/omemo/)
 
-A Python plugin to use (axolotl / Signal Protocol) encryption for the profanity XMPP messenger
+A Python plugin to use (axolotl / Signal Protocol) encryption for the [Profanity](http://www.profanity.im/) XMPP messenger
 
 ## Requirements
 
@@ -21,6 +21,8 @@ Please make sure to match the Plugin-Host requirements from the table below.
 | master | master |
 | v0.1.1 | \>= v0.5.0 |
 | v0.1.0 | \>= v0.5.0 |
+
+You will also need `setuptools` (e.g. through `pip install setuptools`).
 
 
 ## Installation
