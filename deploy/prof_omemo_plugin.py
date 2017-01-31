@@ -196,6 +196,17 @@ def _announce_own_bundle():
     send_stanza(own_bundle_stanza)
 
 
+def _show_no_trust_mgmt_header(jid):
+    show_chat_warning(jid, '###############################################')
+    show_chat_warning(jid, '#                                             #')
+    show_chat_warning(jid, '#                   CAUTION                   #')
+    show_chat_warning(jid, '#    This plugin does not support any form    #')
+    show_chat_warning(jid, '#             of Trust Management             #')
+    show_chat_warning(jid, '#      All Devices are trusted *blindly*      #')
+    show_chat_warning(jid, '#                                             #')
+    show_chat_warning(jid, '###############################################')
+
+
 def _start_omemo_session(jid):
     # should be started before the first message is sent.
 
@@ -214,6 +225,7 @@ def _start_omemo_session(jid):
     prof.chat_set_outgoing_char(jid, message_char)
 
     show_chat_info(jid, 'OMEMO Session started.')
+    _show_no_trust_mgmt_header(jid)
 
     log.info('Query Devicelist for {0}'.format(jid))
     _query_device_list(jid)
