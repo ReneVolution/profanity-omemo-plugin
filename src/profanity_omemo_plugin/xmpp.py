@@ -50,6 +50,11 @@ def encrypt_stanza(stanza):
     body_node = msg_xml.find('.//body')
     plaintext = body_node.text
 
+    try:
+        plaintext = plaintext.encode('utf-8')
+    except:
+        pass
+
     return create_encrypted_message(fulljid, account, plaintext, msg_id=msg_id)
 
 
