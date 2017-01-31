@@ -30,7 +30,8 @@ import profanity_omemo_plugin.xmpp as xmpp
 from profanity_omemo_plugin.constants import (NS_DEVICE_LIST_NOTIFY,
                                               SETTINGS_GROUP,
                                               OMEMO_DEFAULT_ENABLED,
-                                              OMEMO_DEFAULT_MESSAGE_CHAR)
+                                              OMEMO_DEFAULT_MESSAGE_CHAR,
+                                              PLUGIN_NAME)
 from profanity_omemo_plugin.log import get_plugin_logger
 from profanity_omemo_plugin.prof_omemo_state import (ProfOmemoState,
                                                      ProfOmemoUser,
@@ -55,6 +56,35 @@ def send_stanza(stanza):
         return True
 
     return False
+
+
+def show_chat_info(barejid, message):
+    prof.chat_show_themed(
+        barejid,
+        PLUGIN_NAME,
+        'warning',
+        'cyan',
+        None,
+        message
+    )
+
+
+def show_chat_warning(barejid, message):
+    prof.chat_show_themed(
+        barejid,
+        PLUGIN_NAME,
+        'warning',
+        'bold_yellow',
+        None,
+        message
+    )
+
+
+def ensure_unicode_stanza(stanza):
+    if isinstance(stanza, (str, bytes)):
+        stanza = stanza.decode('utf-8')
+
+    return stanza
 
 
 def _get_omemo_enabled_setting():
@@ -89,6 +119,8 @@ def require_sessions_for_all_devices(attrib, else_return=None):
     def wrapper(func):
         @wraps(func)
         def func_wrapper(stanza):
+            stanza = ensure_unicode_stanza(stanza)
+
             recipient = xmpp.get_root_attrib(stanza, attrib)
             try:
                 contat_jid = recipient.rsplit('/', 1)[0]
@@ -178,6 +210,8 @@ def _start_omemo_session(jid):
     message_char = _get_omemo_message_char()
     prof.chat_set_outgoing_char(jid, message_char)
 
+    show_chat_info(jid, 'OMEMO Session started.')
+
     log.info('Query Devicelist for {0}'.format(jid))
     _query_device_list(jid)
 
@@ -190,6 +224,7 @@ def _end_omemo_session(jid):
 
     prof.chat_unset_incoming_char(jid)
     prof.chat_unset_outgoing_char(jid)
+    show_chat_info(jid, 'OMEMO Session ended.')
 
 
 ################################################################################
@@ -198,12 +233,22 @@ def _end_omemo_session(jid):
 
 def _handle_devicelist_update(stanza):
     own_jid = ProfOmemoUser().account
+    omemo_state = ProfOmemoState()
     msg_dict = xmpp.unpack_devicelist_info(stanza)
     sender_jid = msg_dict['from']
     log.info('Received devicelist update from {0}'.format(sender_jid))
-    xmpp.update_devicelist(own_jid, sender_jid, msg_dict['devices'])
 
-    omemo_state = ProfOmemoState()
+    known_devices = omemo_state.device_list_for(sender_jid)
+    new_devices = msg_dict['devices']
+
+    added_devices = set(new_devices) - known_devices
+
+    if added_devices:
+        device_str = ', '.join([str(d) for d in added_devices])
+        msg = '{0} added devices with IDs {1}'.format(sender_jid, device_str)
+        show_chat_warning(sender_jid, msg)
+        xmpp.update_devicelist(own_jid, sender_jid, new_devices)
+
     if not omemo_state.own_device_id_published():
         _announce_own_devicelist()
 
@@ -265,6 +310,8 @@ def _query_device_list(contact_jid):
 @omemo_enabled()
 @require_sessions_for_all_devices('to')
 def prof_on_message_stanza_send(stanza):
+    stanza = ensure_unicode_stanza(stanza)
+
     # TODO: Should we ensure all devices have sessions before we encrypt???
     contact_jid = xmpp.get_recipient(stanza)
     if not ProfActiveOmemoChats.account_is_active(contact_jid):
@@ -325,6 +372,8 @@ def prof_pre_chat_message_send(barejid, message):
 
 @omemo_enabled(else_return=True)
 def prof_on_message_stanza_receive(stanza):
+    stanza = ensure_unicode_stanza(stanza)
+
     log.info('Received Message: {0}'.format(stanza))
     if xmpp.is_devicelist_update(stanza):
         log.info('Device List update detected.')
@@ -370,7 +419,7 @@ def prof_on_message_stanza_receive(stanza):
 
 @omemo_enabled(else_return=True)
 def prof_on_iq_stanza_receive(stanza):
-    # prof_incoming_message() and return FALSE
+    stanza = ensure_unicode_stanza(stanza)
     log.info('Received IQ: {0}'.format(stanza))
 
     if xmpp.is_bundle_update(stanza):  # bundle information received
