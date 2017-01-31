@@ -82,7 +82,10 @@ def show_chat_warning(barejid, message):
 
 def ensure_unicode_stanza(stanza):
     if isinstance(stanza, (str, bytes)):
-        stanza = stanza.decode('utf-8')
+        try:
+            stanza = stanza.decode('utf-8')
+        except AttributeError:  # Python 3 here
+            pass
 
     return stanza
 
