@@ -25,10 +25,24 @@ Please make sure to match the Plugin-Host requirements from the table below.
 You will also need `setuptools` (e.g. through `pip install setuptools`).
 
 
+## Prerequisites
+
+__Linux__
+
+Some Linux distributions require to install some header packages before installing the PyPI cryptography package. 
+Please find more details at [cryptography.io](https://cryptography.io/en/latest/installation/#building-cryptography-on-linux).
+
+__Android (Termux)__
+
+`apt install libffi-dev`
+
 ## Installation
 
-The easiest way to install the plugin is to use the provided `install.sh` script in this repository.
-After installing you have to enable the plugin inside profanity with `/plugins load prof_omemo_plugin.py`.
+- Clone this Repository
+- Run `./install.sh`
+- Open `profanity`
+- Load plugin with `/plugins load prof_omemo_plugin.py`
+
 
 ## Usage
 
