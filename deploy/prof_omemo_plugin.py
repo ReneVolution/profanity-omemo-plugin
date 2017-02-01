@@ -62,7 +62,7 @@ def show_chat_info(barejid, message):
     prof.chat_show_themed(
         barejid,
         PLUGIN_NAME,
-        'warning',
+        'info',
         'cyan',
         None,
         message
@@ -75,6 +75,17 @@ def show_chat_warning(barejid, message):
         PLUGIN_NAME,
         'warning',
         'bold_yellow',
+        None,
+        message
+    )
+
+
+def show_chat_critical(barejid, message):
+    prof.chat_show_themed(
+        barejid,
+        PLUGIN_NAME,
+        'critical',
+        'bold_red',
         None,
         message
     )
@@ -332,14 +343,19 @@ def prof_on_message_stanza_send(stanza):
     # TODO: Should we ensure all devices have sessions before we encrypt???
     contact_jid = xmpp.get_recipient(stanza)
     if not ProfActiveOmemoChats.account_is_active(contact_jid):
-        log.info('Chat not activated for {0}'.format(contact_jid))
+        log.debug('Chat not activated for {0}'.format(contact_jid))
         return None
 
-    if xmpp.is_xmpp_plaintext_message(stanza):
-        encrypted_stanza = xmpp.encrypt_stanza(stanza)
-        if xmpp.stanza_is_valid_xml(encrypted_stanza):
-            return encrypted_stanza
+    try:
+        if xmpp.is_xmpp_plaintext_message(stanza):
+            encrypted_stanza = xmpp.encrypt_stanza(stanza)
+            if xmpp.stanza_is_valid_xml(encrypted_stanza):
+                return encrypted_stanza
+    except Exception as e:
+        log.error('Could not encrypt message')
+        log.error('{0}: {1}'.format(type(e).__name__, e.message))
 
+    show_chat_critical(contact_jid, 'Last message was sent unencrypted.')
     return None
 
 
