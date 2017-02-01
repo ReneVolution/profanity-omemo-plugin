@@ -340,7 +340,6 @@ def _query_device_list(contact_jid):
 def prof_on_message_stanza_send(stanza):
     stanza = ensure_unicode_stanza(stanza)
 
-    # TODO: Should we ensure all devices have sessions before we encrypt???
     contact_jid = xmpp.get_recipient(stanza)
     if not ProfActiveOmemoChats.account_is_active(contact_jid):
         log.debug('Chat not activated for {0}'.format(contact_jid))
@@ -359,12 +358,16 @@ def prof_on_message_stanza_send(stanza):
     return None
 
 
-@omemo_enabled()
 def prof_pre_chat_message_send(barejid, message):
     """ Called before a chat message is sent
 
-    :returns: the new message to send, or None to preserve the original message
+    :returns: the new message to send, returning None stops the message
+              from being sent
     """
+
+    plugin_enabled = _get_omemo_enabled_setting()
+    if not plugin_enabled:
+        return message
 
     if not ProfActiveOmemoChats.account_is_active(barejid):
         log.info('Chat not activated for {0}'.format(barejid))
