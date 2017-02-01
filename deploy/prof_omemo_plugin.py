@@ -83,7 +83,8 @@ def show_chat_warning(barejid, message):
 def ensure_unicode_stanza(stanza):
     if isinstance(stanza, (str, bytes)):
         try:
-            stanza = stanza.decode('utf-8')
+            u_stanza = stanza.decode('utf-8')
+            return u_stanza
         except AttributeError:  # Python 3 here
             pass
 
@@ -350,7 +351,7 @@ def prof_pre_chat_message_send(barejid, message):
 
     if not ProfActiveOmemoChats.account_is_active(barejid):
         log.info('Chat not activated for {0}'.format(barejid))
-        return None
+        return message
 
     omemo_state = ProfOmemoState()
     uninitialzed_devices = omemo_state.devices_without_sessions(barejid)

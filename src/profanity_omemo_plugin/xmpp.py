@@ -41,8 +41,17 @@ logger = get_plugin_logger(__name__)
 # Helper
 ################################################################################
 
+def stanza_as_xml(stanza):
+    try:
+        xml = ET.fromstring(stanza)
+    except UnicodeEncodeError:
+        xml = ET.fromstring(stanza.encode('utf-8'))
+
+    return xml
+
+
 def encrypt_stanza(stanza):
-    msg_xml = ET.fromstring(stanza)
+    msg_xml = stanza_as_xml(stanza)
     fulljid = msg_xml.attrib.get('from', ProfOmemoUser().fulljid)
     jid = msg_xml.attrib['to']
     account = jid.rsplit('/', 1)[0]
@@ -76,7 +85,7 @@ def update_devicelist(account, recipient, devices):
 
 def get_recipient(stanza):
     try:
-        xml = ET.fromstring(stanza)
+        xml = stanza_as_xml(stanza)
         recipient = xml.attrib['to']
     except:
         return None
@@ -86,9 +95,14 @@ def get_recipient(stanza):
 
 def get_root_attrib(stanza, attrib):
     try:
-        xml = ET.fromstring(stanza)
+        xml = stanza_as_xml(stanza)
         result = xml.attrib[attrib]
-    except:
+    except KeyError:
+        logger.error('Stanza has not attrib {0}'.format(attrib))
+        return None
+    except Exception as e:
+        logger.error('Failed to parse stanza: {0}'.format(stanza))
+        logger.error('{0}: {1}'.format(type(e).__name__, e.message))
         return None
 
     return result
@@ -101,7 +115,7 @@ def get_root_attrib(stanza, attrib):
 def stanza_is_valid_xml(stanza):
     """ Validates a given stanza to be valid xml"""
     try:
-        _ = ET.fromstring(stanza)
+        _ = stanza_as_xml(stanza)
     except Exception as e:
         logger.error('Stanza is not valid xml. {0}'.format(e))
         logger.error(stanza)
@@ -140,7 +154,7 @@ def is_xmpp_plaintext_message(stanza):
 
 def unpack_bundle_info(stanza):
     logger.info('Unwrapping bundle info.')
-    bundle_xml = ET.fromstring(stanza)
+    bundle_xml = stanza_as_xml(stanza)
 
     try:
         sender = bundle_xml.attrib['from'].rsplit('/', 1)[0]
@@ -190,9 +204,6 @@ def unpack_bundle_info(stanza):
         'preKeyId': preKeyId,
         'preKeyPublic': b64decode(preKeyPublic)
     }
-
-    for k, v in bundle_dict.items():
-        logger.info('{0} => {1} ({2})'.format(k, v, len(str(v))))
 
     return bundle_dict
 
@@ -254,7 +265,7 @@ def unpack_encrypted_stanza(encrypted_stanza):
 
 
 def unpack_devicelist_info(stanza):
-    xml = ET.fromstring(stanza)
+    xml = stanza_as_xml(stanza)
 
     try:
         sender_jid = xml.attrib.get('from')
