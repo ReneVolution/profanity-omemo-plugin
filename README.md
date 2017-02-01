@@ -32,8 +32,10 @@ Please find more details at [cryptography.io](https://cryptography.io/en/latest/
 
 __Android (Termux)__
 
-`apt install libffi-dev`
+- Run `apt install git clang libffi-dev openssl-dev`
+- Run `export CONFIG_SHELL="$PREFIX/bin/sh"`
 
+<br/>
 **You will also need `setuptools` (e.g. through `pip install setuptools`).**
 
 
