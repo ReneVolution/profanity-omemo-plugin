@@ -22,8 +22,6 @@ Please make sure to match the Plugin-Host requirements from the table below.
 | v0.1.1 | \>= v0.5.0 |
 | v0.1.0 | \>= v0.5.0 |
 
-You will also need `setuptools` (e.g. through `pip install setuptools`).
-
 
 ## Prerequisites
 
@@ -36,13 +34,15 @@ __Android (Termux)__
 
 `apt install libffi-dev`
 
+**You will also need `setuptools` (e.g. through `pip install setuptools`).**
+
+
 ## Installation
 
 - Clone this Repository
 - Run `./install.sh`
 - Open `profanity`
 - Load plugin with `/plugins load prof_omemo_plugin.py`
-
 
 ## Usage
 
