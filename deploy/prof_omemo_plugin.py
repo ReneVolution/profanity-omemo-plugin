@@ -276,6 +276,7 @@ def add_recipient_to_completer(recipient):
     log.info('Adding {} to the completer.'.format(recipient))
     prof.completer_add('/omemo start', [recipient])
     prof.completer_add('/omemo show_devices', [recipient])
+    prof.completer_add('/omemo reset_devicelist', [recipient])
 
 
 def _handle_bundle_update(stanza):
@@ -517,6 +518,14 @@ def _parse_args(arg1=None, arg2=None, arg3=None):
         devices = omemo_state.device_list_for(account)
         prof.cons_show('Devices: {0}'.format(devices))
         prof.cons_show('{0}: {1}'.format(account, ', '.join(devices)))
+
+    elif arg1 == 'reset_devicelist' and arg2 is not None:
+        contact_jid = arg2
+        if contact_jid != ProfOmemoUser.account:
+            omemo_state = ProfOmemoState()
+            omemo_state.set_devices(contact_jid, [])
+            _query_device_list(contact_jid)
+
     else:
         prof.cons_show('Argument {0} not supported.'.format(arg1))
 
@@ -537,6 +546,7 @@ def prof_init(version, status, account_name, fulljid):
         '/omemo account',
         '/omemo fulljid',
         '/omemo show_devices'
+        '/omemo reset_devicelist'
     ]
 
     description = 'Plugin to enable OMEMO encryption'
@@ -547,6 +557,7 @@ def prof_init(version, status, account_name, fulljid):
         ['set', 'Set Settings like Message Prefix'],
         ['status', 'Display the current Profanity OMEMO PLugin stauts.'],
         ['account', 'Show current account name'],
+        ['reset_devicelist <jid>', 'Manually reset a contacts devicelist.'],
         ['fulljid', 'Show current <full-jid>']
     ]
 
@@ -557,7 +568,7 @@ def prof_init(version, status, account_name, fulljid):
                           synopsis, description, args, examples, _parse_args)
 
     prof.completer_add('/omemo', ['on', 'off', 'status', 'start', 'end', 'set'
-                                  'account', 'fulljid', 'show_devices'])
+                                  'account', 'fulljid', 'show_devices', 'reset_devicelist'])
 
     prof.completer_add('/omemo set', ['message_prefix'])
 

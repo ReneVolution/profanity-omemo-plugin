@@ -170,17 +170,32 @@ def unpack_bundle_info(stanza):
     bundle_node = bundle_xml.find('.//{%s}bundle' % NS_OMEMO)
 
     signedPreKeyPublic_node = bundle_node.find('.//{%s}signedPreKeyPublic' % NS_OMEMO)
+    if not signedPreKeyPublic_node:
+        # ChatSecure seems to use the wrong xml namespace
+        signedPreKeyPublic_node = bundle_node.find('.//{jabber:client}signedPreKeyPublic')
+
     signedPreKeyPublic = signedPreKeyPublic_node.text
 
     signedPreKeyId = int(signedPreKeyPublic_node.attrib['signedPreKeyId'])
 
     signedPreKeySignature_node = bundle_node.find('.//{%s}signedPreKeySignature' % NS_OMEMO)
+    if not signedPreKeySignature_node:
+        # ChatSecure seems to use the wrong xml namespace
+        signedPreKeySignature_node = bundle_node.find('.//{jabber:client}signedPreKeySignature')
+
     signedPreKeySignature = signedPreKeySignature_node.text
 
     identityKey_node = bundle_node.find('.//{%s}identityKey' % NS_OMEMO)
+    if not identityKey_node:
+        # ChatSecure seems to use the wrong xml namespace
+        identityKey_node = bundle_node.find('.//{jabber:client}identityKey')
+
     identityKey = identityKey_node.text
 
     prekeys_node = bundle_node.find('.//{%s}prekeys' % NS_OMEMO)
+    if not prekeys_node:
+        # ChatSecure seems to use the wrong xml namespace
+        prekeys_node = bundle_node.find('.//{jabber:client}prekeys')
 
     prekeys = [(int(n.attrib['preKeyId']), n.text) for n in prekeys_node]
 
