@@ -50,6 +50,20 @@ def stanza_as_xml(stanza):
     return xml
 
 
+def find_node(xml, name, ns=None):
+    node = None
+
+    if ns:
+        node = xml.find('.//{%s}%s' % (ns, name))
+
+    if node is None:
+        # ChatSecure seems to use the wrong xml namespace
+        # use a fallback here with the custom namespace for some nodes
+        node = xml.find('.//{%s}%s' % ('jabber:client', name))
+
+    return node
+
+
 def encrypt_stanza(stanza):
     msg_xml = stanza_as_xml(stanza)
     fulljid = msg_xml.attrib.get('from', ProfOmemoUser().fulljid)
@@ -163,40 +177,23 @@ def unpack_bundle_info(stanza):
         # different devices
         sender = ProfOmemoUser.account
 
-    items_node = bundle_xml.find(
-        './/{%s}items' % 'http://jabber.org/protocol/pubsub')
+    items_node = find_node(bundle_xml, 'items', ns='http://jabber.org/protocol/pubsub')
     device_id = items_node.attrib['node'].split(':')[-1]
 
-    bundle_node = bundle_xml.find('.//{%s}bundle' % NS_OMEMO)
+    bundle_node = find_node(bundle_xml, 'bundle', ns=NS_OMEMO)
 
-    signedPreKeyPublic_node = bundle_node.find('.//{%s}signedPreKeyPublic' % NS_OMEMO)
-    if not signedPreKeyPublic_node:
-        # ChatSecure seems to use the wrong xml namespace
-        signedPreKeyPublic_node = bundle_node.find('.//{jabber:client}signedPreKeyPublic')
-
+    signedPreKeyPublic_node = find_node(bundle_node, 'signedPreKeyPublic', ns=NS_OMEMO)
     signedPreKeyPublic = signedPreKeyPublic_node.text
 
     signedPreKeyId = int(signedPreKeyPublic_node.attrib['signedPreKeyId'])
 
-    signedPreKeySignature_node = bundle_node.find('.//{%s}signedPreKeySignature' % NS_OMEMO)
-    if not signedPreKeySignature_node:
-        # ChatSecure seems to use the wrong xml namespace
-        signedPreKeySignature_node = bundle_node.find('.//{jabber:client}signedPreKeySignature')
-
+    signedPreKeySignature_node = find_node(bundle_node, 'signedPreKeySignature', ns=NS_OMEMO)
     signedPreKeySignature = signedPreKeySignature_node.text
 
-    identityKey_node = bundle_node.find('.//{%s}identityKey' % NS_OMEMO)
-    if not identityKey_node:
-        # ChatSecure seems to use the wrong xml namespace
-        identityKey_node = bundle_node.find('.//{jabber:client}identityKey')
-
+    identityKey_node = find_node(bundle_node, 'identityKey', ns=NS_OMEMO)
     identityKey = identityKey_node.text
 
-    prekeys_node = bundle_node.find('.//{%s}prekeys' % NS_OMEMO)
-    if not prekeys_node:
-        # ChatSecure seems to use the wrong xml namespace
-        prekeys_node = bundle_node.find('.//{jabber:client}prekeys')
-
+    prekeys_node = find_node(bundle_node, 'prekeys', ns=NS_OMEMO)
     prekeys = [(int(n.attrib['preKeyId']), n.text) for n in prekeys_node]
 
     picked_key_tuple = random.SystemRandom().choice(prekeys)

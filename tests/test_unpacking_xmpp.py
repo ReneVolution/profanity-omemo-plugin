@@ -11,6 +11,7 @@ import profanity_omemo_plugin.xmpp as xmpp
 from profanity_omemo_plugin.constants import NS_DEVICE_LIST, NS_OMEMO
 from profanity_omemo_plugin.prof_omemo_state import ProfOmemoUser, \
     ProfOmemoState
+from .fixtures import get_stanza_fixture
 
 
 def get_test_db_connection():
@@ -20,10 +21,19 @@ def get_test_db_connection():
 
 class TestUnpackingXMPP(object):
 
-    @patch('profanity_omemo_plugin.db.get_connection')
-    def test_unpack_bundle_info(self, mockdb):
-        mockdb.return_value = get_test_db_connection()
-        pytest.skip('WIP')
+    def test_unpack_bundle_info(self):
+        stanza = get_stanza_fixture('iq_bundle_info.xml')
+        bundle_info = xmpp.unpack_bundle_info(stanza)
+
+        assert bundle_info.get('sender') == 'bob@secure.it'
+        assert bundle_info.get('device') == '666666'
+
+    def test_unpack_bundle_info_chatsecure(self):
+        stanza = get_stanza_fixture('iq_bundle_info_chatsecure.xml')
+        bundle_info = xmpp.unpack_bundle_info(stanza)
+
+        assert bundle_info.get('sender') == 'bob@secure.it'
+        assert bundle_info.get('device') == '4711'
 
     @patch('profanity_omemo_plugin.db.get_connection')
     def test_unpack_devicelist_update(self, mockdb):
