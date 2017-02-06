@@ -36,14 +36,14 @@ setup(
     url='https://github.com/ReneVolution/profanity-omemo-plugin.git',
     author='Rene Calles',
     author_email='info@renevolution.com',
-    license='MIT',
+    license='GPL',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'Topic :: Security :: Cryptography',
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',  # noqa
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
