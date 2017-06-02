@@ -211,7 +211,11 @@ class OmemoState:
             log.warning('Duplicate message found ' + str(e.args))
             return
 
-        result = unicode(decrypt(key, iv, payload))
+        result = decrypt(key, iv, payload)
+        try:
+            result = unicode(result)
+        except NameError:  # Py3
+            pass
 
         log.debug("Decrypted Message => " + result)
         return result
