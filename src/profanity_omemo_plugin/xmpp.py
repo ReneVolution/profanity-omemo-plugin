@@ -24,9 +24,11 @@ import random
 import uuid
 from base64 import b64decode, b64encode
 
-from profanity_omemo_plugin.constants import NS_OMEMO, NS_DEVICE_LIST, NS_DEVICE_LIST_NOTIFY, NS_BUNDLES
+from profanity_omemo_plugin.constants import NS_OMEMO, NS_DEVICE_LIST, \
+    NS_DEVICE_LIST_NOTIFY, NS_BUNDLES
 from profanity_omemo_plugin.log import get_plugin_logger
-from profanity_omemo_plugin.prof_omemo_state import ProfOmemoState, ProfOmemoUser
+from profanity_omemo_plugin.prof_omemo_state import ProfOmemoState, \
+    ProfOmemoUser
 
 try:
     from lxml import etree as ET
@@ -398,9 +400,17 @@ def create_encrypted_message(from_jid, to_jid, plaintext, msg_id=None):
     msg_data = omemo_state.create_msg(account, to_jid, plaintext)
 
     # build encrypted message from here
-    keys_tpl = '<key rid="{0}">{1}</key>'
     keys_dict = msg_data['keys']
-    keys_str = ''.join([keys_tpl.format(rid, b64encode(key)) for rid, key in keys_dict.items()])
+
+    # key is now a tuple of (key, is_prekey)
+    keys_str = ''
+    for rid, key_info in keys_dict.items():
+        key, is_prekey = key_info
+        if is_prekey:
+            tpl = '<key prekey="true" rid="{0}">{1}</key>'
+        else:
+            tpl = '<key rid="{0}">{1}</key>'
+        keys_str += tpl.format(rid, b64encode(key))
 
     msg_dict = {'to': to_jid,
                 'from': from_jid,
