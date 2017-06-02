@@ -27,17 +27,13 @@ from profanity_omemo_plugin.log import get_plugin_logger
 
 logger = get_plugin_logger(__name__)
 
-try:
-    from omemo.state import OmemoState
+from profanity_omemo_plugin.omemo.state import OmemoState
 
-    def _isTrusted(self, recipient_id, device_id):
-        return True
+# Monkeypatching trusted state until it has been implemented correctly
+def _isTrusted(self, recipient_id, device_id):
+    return True
 
-    OmemoState.isTrusted = _isTrusted
-
-except ImportError:
-    logger.error('Could not import OmemoState')
-    raise
+OmemoState.isTrusted = _isTrusted
 
 
 class DummyPLugin(object):

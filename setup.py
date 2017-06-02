@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import platform
 from codecs import open
 from glob import glob
 from os import path
@@ -15,6 +16,16 @@ here = path.abspath(path.dirname(__file__))
 # Get the long description from the README file
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
+
+requirements = [
+        'python-axolotl>=0.1.7',
+        'protobuf>=3.0.0b2,<3.2'
+    ]
+
+if platform.python_implementation() == 'PyPy':
+    requirements += ['pycrypto']
+else:
+    requirements += ['cryptography>=1.1']
 
 
 class CustomInstallCommand(install):
@@ -59,10 +70,9 @@ setup(
     include_package_data=True,
     zip_safe=False,
     data_files=[('profanity_omemo_plugin', ['deploy/prof_omemo_plugin.py'])],
-    install_requires=['protobuf>=3.0.0b2,<3.2', 'python-omemo==0.1.0'],
+    install_requires=requirements,
     setup_requires=['pytest-runner'],
     tests_require=['pytest', 'mock'],
-    dependency_links=['git+https://github.com/lovetox/python-omemo.git@new#egg=python-omemo-0.1.0'],  # noqa
 
     # Extend the install command with a post_install command
     cmdclass={'install': CustomInstallCommand},

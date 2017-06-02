@@ -3,8 +3,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
-
 import sys
+
 from mock import MagicMock, patch
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -96,7 +96,7 @@ class TestPluginHooks(object):
 
         assert func(stanza) == stanza
 
-    @patch('omemo.state.OmemoState.devices_without_sessions')
+    @patch('profanity_omemo_plugin.omemo.state.OmemoState.devices_without_sessions')
     def test_has_session_decorator_returns_default_if_no_session(self, devices_mock):
         devices_mock.return_value = [223, 445]
 
@@ -109,7 +109,7 @@ class TestPluginHooks(object):
 
         assert func(stanza) is None
 
-    @patch('omemo.state.OmemoState.devices_without_sessions')
+    @patch('profanity_omemo_plugin.omemo.state.OmemoState.devices_without_sessions')
     def test_has_session_decorator_returns_custom_return_if_no_session(self, devices_mock):
         devices_mock.return_value = [4711, 1290]
 
