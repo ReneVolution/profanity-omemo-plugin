@@ -21,6 +21,7 @@
 from __future__ import unicode_literals
 
 import logging
+import traceback
 
 PROFANITY_IS_HOST = True
 
@@ -54,7 +55,12 @@ class ProfLogHandler(logging.Handler):
             }
 
             try:
-                level_fn_map[record.levelno](self.format(record))
+                log_message = self.format(record)
+                if record.levelno == 40 and record.exc_info:
+                    tb_info = record.exc_info
+                    log_message += '\n' + traceback.print_exception(*tb_info)
+
+                level_fn_map[record.levelno](log_message)
             except Exception as e:
                 prof.log_error('Could not log last message. {0}'.format(e.message))
 

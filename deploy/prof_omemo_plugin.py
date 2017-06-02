@@ -351,8 +351,7 @@ def prof_on_message_stanza_send(stanza):
             if xmpp.stanza_is_valid_xml(encrypted_stanza):
                 return encrypted_stanza
     except Exception as e:
-        log.error('Could not encrypt message')
-        log.error('{0}: {1}'.format(type(e).__name__, e.message))
+        log.exception('Could not encrypt message')
 
     show_chat_critical(contact_jid, 'Last message was sent unencrypted.')
     return None
