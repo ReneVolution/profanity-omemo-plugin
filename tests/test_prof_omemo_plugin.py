@@ -66,7 +66,7 @@ class TestPluginHooks(object):
 
         assert ret_val is None
 
-    @patch('omemo.state.OmemoState.devices_without_sessions')
+    @patch('profanity_omemo_plugin.omemo.state.OmemoState.devices_without_sessions')
     def test_has_session_decorator_returns_func_result(self, devices_mock):
 
         devices_mock.return_value = []
@@ -80,7 +80,7 @@ class TestPluginHooks(object):
 
         assert func(stanza) == stanza
 
-    @patch('omemo.state.OmemoState.devices_without_sessions')
+    @patch('profanity_omemo_plugin.omemo.state.OmemoState.devices_without_sessions')
     def test_has_session_decorator_returns_func_result_on_none_session(self, devices_mock):
         devices_mock.return_value = []
 
