@@ -412,7 +412,11 @@ def prof_on_message_stanza_receive(stanza):
     log.info('Received Message: {0}'.format(stanza))
     if xmpp.is_devicelist_update(stanza):
         log.info('Device List update detected.')
-        _handle_devicelist_update(stanza)
+        try:
+            _handle_devicelist_update(stanza)
+        except:
+            log.exception('Failed to handle devicelist update.')
+
         return False
 
     if xmpp.is_encrypted_message(stanza):
@@ -426,13 +430,12 @@ def prof_on_message_stanza_receive(stanza):
 
             try:
                 plain_msg = omemo_state.decrypt_msg(msg_dict)
-            except Exception as e:
-                msg = 'Could not decrypt Messages. {0}: {1}'
-                log.error(msg.format(e.__class__.__name__, e.message))
+            except Exception:
+                log.exception('Could not decrypt Message.')
                 return False
 
             if plain_msg is None:
-                log.info('Could not decrypt Message')
+                log.error('Could not decrypt Message')
                 return True
 
             if plain_msg:
@@ -445,9 +448,9 @@ def prof_on_message_stanza_receive(stanza):
                     prof.chat_unset_incoming_char(sender)
             return False
 
-        except Exception as e:
+        except Exception:
             # maybe not OMEMO encrypted, profanity will take care then
-            log.error('Could not handle encrypted message. {0}'.format(str(e)))
+            log.exception('Could not handle encrypted message.')
 
     return True
 
