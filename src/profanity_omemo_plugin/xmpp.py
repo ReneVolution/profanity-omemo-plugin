@@ -83,19 +83,20 @@ def encrypt_stanza(stanza):
     return create_encrypted_message(fulljid, account, plaintext, msg_id=msg_id)
 
 
-def update_devicelist(account, recipient, devices):
+def update_devicelist(from_jid, recipient, devices):
     omemo_state = ProfOmemoState()
 
+    logger.debug('Update devices for account: {0}'.format(from_jid))
     logger.info('Adding Device ID\'s: {0} for {1}.'.format(devices, recipient))
     if devices:
-        if account == recipient:
+        if from_jid == recipient:
             logger.info('Adding own devices')
             omemo_state.set_own_devices(devices)
         else:
             logger.info('Adding recipients devices')
             omemo_state.set_devices(recipient, devices)
 
-        omemo_state.store.sessionStore.setActiveState(devices, account)
+        omemo_state.store.sessionStore.setActiveState(devices, from_jid)
         logger.info('Device List update done.')
 
 

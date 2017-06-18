@@ -259,8 +259,8 @@ def _end_omemo_session(jid):
 ################################################################################
 
 def _handle_devicelist_update(stanza):
-    own_jid = ProfOmemoUser().account
     omemo_state = ProfOmemoState()
+    own_jid = omemo_state.own_jid
     msg_dict = xmpp.unpack_devicelist_info(stanza)
     sender_jid = msg_dict['from']
     log.info('Received devicelist update from {0}'.format(sender_jid))
