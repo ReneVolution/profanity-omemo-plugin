@@ -427,6 +427,11 @@ def prof_on_message_stanza_receive(stanza):
             msg_dict = xmpp.unpack_encrypted_stanza(stanza)
             sender = msg_dict['sender_jid']
             resource = msg_dict['sender_resource']
+            sender_fulljid = sender + '/' + resource
+
+            if sender_fulljid == ProfOmemoUser().fulljid:
+                log.debug('Skipping own Message.')
+                return False
 
             try:
                 plain_msg = omemo_state.decrypt_msg(msg_dict)
