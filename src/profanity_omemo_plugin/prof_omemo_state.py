@@ -48,7 +48,10 @@ class ProfOmemoState(object):
 
     def __new__(cls, *args, **kwargs):
         account = ProfOmemoUser().account
-        own_jid = ProfOmemoUser().fulljid.rsplit('/', 1)[0]
+        if ProfOmemoUser().fulljid:
+            own_jid = ProfOmemoUser().fulljid.rsplit('/', 1)[0]
+        else:
+            own_jid = account
 
         if not own_jid:
             raise RuntimeError('No User connected.')
