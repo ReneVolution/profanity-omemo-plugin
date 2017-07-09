@@ -67,35 +67,74 @@ class ProfOmemoState(object):
 
 class ProfActiveOmemoChats(object):
 
-    __active = set()
-
-    @classmethod
-    def active(cls):
-        return cls.__active
+    _active = {}
 
     @classmethod
     def add(cls, contact_jid):
         raw_jid = cls.as_raw_jid(contact_jid)
-        cls.__active.add(raw_jid)
-        prof.log_info('Added {0} to active chats'.format(raw_jid))
+        if raw_jid not in cls._active:
+            cls._active[raw_jid] = {'deactivated': False}
+            prof.log_info('Added {0} to active chats'.format(raw_jid))
+        else:
+            cls.activate(raw_jid)
+            prof.log_info('Chat with {0} re-activated.')
+
+    @classmethod
+    def activate(cls, contact_jid):
+        raw_jid = cls.as_raw_jid(contact_jid)
+        cls._active[raw_jid] = {'deactivated': False}
+
+    @classmethod
+    def deactivate(cls, contact_jid):
+        raw_jid = cls.as_raw_jid(contact_jid)
+        user = cls._active.get(raw_jid)
+
+        try:
+            user['deactivated'] = True
+        except KeyError:
+            pass
 
     @classmethod
     def remove(cls, contact_jid):
         raw_jid = cls.as_raw_jid(contact_jid)
         try:
-            cls.__active.remove(raw_jid)
+            del cls._active[raw_jid]
         except KeyError:
             pass
 
     @classmethod
+    def account_is_registered(cls, contact_jid):
+        raw_jid = cls.as_raw_jid(contact_jid)
+        prof.log_info('Active Chats: [{0}]'.format(', '.join(cls._active)))
+        active_user = cls._active.get(raw_jid)
+
+        return active_user is not None
+
+    @classmethod
     def account_is_active(cls, contact_jid):
         raw_jid = cls.as_raw_jid(contact_jid)
-        prof.log_info('Active Chats: [{0}]'.format(', '.join(cls.active())))
-        return raw_jid in cls.active()
+        prof.log_info('Active Chats: [{0}]'.format(', '.join(cls._active)))
+        active_user = cls._active.get(raw_jid)
+        if not active_user:
+            return False
+
+        return not active_user['deactivated']
+
+    @classmethod
+    def account_is_deactivated(cls, contact_jid):
+        raw_jid = cls.as_raw_jid(contact_jid)
+        active_user = cls._active.get(raw_jid)
+
+        # if the user does not have an active session yet,
+        # the user can't be deactivated
+        if not active_user:
+            return False
+
+        return active_user['deactivated']
 
     @classmethod
     def reset(cls):
-        cls.__active = set()
+        cls._active = {}
 
     @staticmethod
     def as_raw_jid(contact_jid):

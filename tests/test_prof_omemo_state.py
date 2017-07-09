@@ -80,32 +80,32 @@ class TestProfOmemoUtils(object):
     def test_omemo_acitve_chat_is_singleton(self):
         account = 'juliet@capulet.lit'
 
-        active_chats_instance = ProfActiveOmemoChats()
+        active_chats_instance = ProfActiveOmemoChats
         ProfActiveOmemoChats.add(account)
 
-        new_active_chats_instance = ProfActiveOmemoChats()
+        new_active_chats_instance = ProfActiveOmemoChats
 
-        assert active_chats_instance.active() == new_active_chats_instance.active()
+        assert active_chats_instance._active == new_active_chats_instance._active
 
     def test_omemo_chat_adds_accounts_uniquely(self):
         account = 'juliet@capulet.lit'
-        assert len(ProfActiveOmemoChats.active()) == 0
+        assert len(ProfActiveOmemoChats._active) == 0
 
         ProfActiveOmemoChats.add(account)
-        assert len(ProfActiveOmemoChats.active()) == 1
+        assert len(ProfActiveOmemoChats._active) == 1
 
         ProfActiveOmemoChats.add(account)
-        assert len(ProfActiveOmemoChats.active()) == 1
+        assert len(ProfActiveOmemoChats._active) == 1
 
     def test_omemo_chat_remove_account(self):
         account = 'juliet@capulet.lit'
-        assert len(ProfActiveOmemoChats.active()) == 0
+        assert len(ProfActiveOmemoChats._active) == 0
 
         ProfActiveOmemoChats.add(account)
-        assert len(ProfActiveOmemoChats.active()) == 1
+        assert len(ProfActiveOmemoChats._active) == 1
 
         ProfActiveOmemoChats.remove(account)
-        assert len(ProfActiveOmemoChats.active()) == 0
+        assert len(ProfActiveOmemoChats._active) == 0
 
     def test_prof_active_chats_finds_active_chats(self):
         account = 'juliet@capulet.lit'

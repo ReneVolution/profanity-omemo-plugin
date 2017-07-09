@@ -225,7 +225,10 @@ def _start_omemo_session(jid):
     # we store the jid in ProfActiveOmemoChats as the user at least intends to
     # use OMEMO encryption. The respecting methods should then not ignore
     # sending OMEMO messages and fail if no session was created then.
-    ProfActiveOmemoChats.add(jid)
+    if not ProfActiveOmemoChats.account_is_registered(jid):
+        ProfActiveOmemoChats.add(jid)
+    else:
+        ProfActiveOmemoChats.activate(jid)
 
     # ensure we have no running OTR session
     prof.encryption_reset(jid)
@@ -244,7 +247,7 @@ def _start_omemo_session(jid):
 
 
 def _end_omemo_session(jid):
-    ProfActiveOmemoChats.remove(jid)
+    ProfActiveOmemoChats.deactivate(jid)
 
     # Release OMEMO from titlebar
     prof.chat_unset_titlebar_enctext(jid)
@@ -447,10 +450,20 @@ def prof_on_message_stanza_receive(stanza):
                 # only mark the message if it was an OMEMO encrypted message
                 try:
                     message_char = _get_omemo_message_char()
+                    log.debug('Set incoming Message Character: {0}'.format(message_char))
                     prof.chat_set_incoming_char(sender, message_char)
                     prof.incoming_message(sender, resource, plain_msg)
                 finally:
                     prof.chat_unset_incoming_char(sender)
+
+                # if this was the first OMEMO encrypted message received by
+                # the sender (a.k.a. whenever profanity opens a new chat window
+                # for a recipient), we automatically respond with OMEMO encrypted
+                # messages. If encryption is turned off later by the user,
+                # we respect that.
+                if not ProfActiveOmemoChats.account_is_deactivated(sender):
+                    _start_omemo_session(sender)
+
             return False
 
         except Exception:
