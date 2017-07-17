@@ -245,6 +245,8 @@ def _start_omemo_session(jid):
     log.info('Query Devicelist for {0}'.format(jid))
     _query_device_list(jid)
 
+    prof.settings_string_list_add(SETTINGS_GROUP, 'omemo_sessions', jid)
+
 
 def _end_omemo_session(jid):
     ProfActiveOmemoChats.deactivate(jid)
@@ -254,6 +256,9 @@ def _end_omemo_session(jid):
 
     prof.chat_unset_incoming_char(jid)
     prof.chat_unset_outgoing_char(jid)
+
+    prof.settings_string_list_remove(SETTINGS_GROUP, 'omemo_sessions', jid)
+
     show_chat_info(jid, 'OMEMO Session ended.')
 
 
@@ -461,8 +466,9 @@ def prof_on_message_stanza_receive(stanza):
                 # for a recipient), we automatically respond with OMEMO encrypted
                 # messages. If encryption is turned off later by the user,
                 # we respect that.
-                if not ProfActiveOmemoChats.account_is_deactivated(sender):
-                    _start_omemo_session(sender)
+                if not ProfActiveOmemoChats.account_is_active(sender):
+                    if not ProfActiveOmemoChats.account_is_deactivated(sender):
+                        _start_omemo_session(sender)
 
             return False
 
@@ -572,6 +578,14 @@ def _parse_args(arg1=None, arg2=None, arg3=None):
 ################################################################################
 # Plugin State Changes
 ################################################################################
+
+
+def prof_on_chat_win_focus(barejid):
+    if not ProfActiveOmemoChats.account_is_registered(barejid):
+        # get remembered user sessions
+        u_sess = prof.settings_string_list_get(SETTINGS_GROUP, 'omemo_sessions')
+        if barejid in u_sess:
+            _start_omemo_session(barejid)
 
 
 def prof_init(version, status, account_name, fulljid):
