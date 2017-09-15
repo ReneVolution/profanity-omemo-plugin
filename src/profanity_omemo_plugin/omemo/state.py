@@ -378,6 +378,9 @@ class OmemoState:
         identity_key = record.getSessionState().getRemoteIdentityKey()
         return self.store.isTrustedIdentity(recipient_id, identity_key)
 
+    def getFingerprints(self, recipient_id):
+        return self.store.getFingerprints(recipient_id)
+
     def getTrustedFingerprints(self, recipient_id):
         inactive = self.store.getInactiveSessionsKeys(recipient_id)
         trusted = self.store.getTrustedFingerprints(recipient_id)

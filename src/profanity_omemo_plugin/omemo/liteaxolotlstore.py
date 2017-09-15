@@ -93,6 +93,9 @@ class LiteAxolotlStore(AxolotlStore):
     def setTrust(self, identityKey, trust):
         return self.identityKeyStore.setTrust(identityKey, trust)
 
+    def getFingerprints(self, jid):
+        return self.identityKeyStore.getFingerprints(jid)
+
     def getTrustedFingerprints(self, jid):
         return self.identityKeyStore.getTrustedFingerprints(jid)
 

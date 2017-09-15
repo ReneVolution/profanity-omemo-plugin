@@ -22,6 +22,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import binascii
 from functools import wraps
 
 import prof
@@ -295,6 +296,7 @@ def add_recipient_to_completer(recipient):
     log.info('Adding {} to the completer.'.format(recipient))
     prof.completer_add('/omemo start', [recipient])
     prof.completer_add('/omemo show_devices', [recipient])
+    prof.completer_add('/omemo fingerprints', [recipient])
     prof.completer_add('/omemo reset_devicelist', [recipient])
 
 
@@ -575,6 +577,19 @@ def _parse_args(arg1=None, arg2=None, arg3=None):
             omemo_state.set_devices(contact_jid, [])
             _query_device_list(contact_jid)
 
+    elif arg1 == 'fingerprints':
+        contact_jid = arg2 or ProfOmemoUser.account
+        omemo_state = ProfOmemoState()
+
+        fingerprints = omemo_state.getFingerprints(contact_jid)
+        prof.cons_show('Fingerprints for account: {0}'.format(contact_jid))
+        for record in fingerprints:
+            _id, recipient_id, public_key, trust = record
+            fpr = binascii.hexlify(public_key)
+            fpr = human_hash(fpr[2:])
+
+            prof.cons_show('{0}: {1}'.format(recipient_id, fpr))
+
     else:
         prof.cons_show('Argument {0} not supported.'.format(arg1))
 
@@ -602,7 +617,8 @@ def prof_init(version, status, account_name, fulljid):
         '/omemo status',
         '/omemo account',
         '/omemo fulljid',
-        '/omemo show_devices'
+        '/omemo fingerprints',
+        '/omemo show_devices',
         '/omemo reset_devicelist'
     ]
 
@@ -613,6 +629,7 @@ def prof_init(version, status, account_name, fulljid):
                              'window or current window.')],
         ['set', 'Set Settings like Message Prefix'],
         ['status', 'Display the current Profanity OMEMO PLugin stauts.'],
+        ['fingerprints <jid>', 'Display the known fingerprints for <jid>'],
         ['account', 'Show current account name'],
         ['reset_devicelist <jid>', 'Manually reset a contacts devicelist.'],
         ['fulljid', 'Show current <full-jid>']
@@ -625,7 +642,8 @@ def prof_init(version, status, account_name, fulljid):
                           synopsis, description, args, examples, _parse_args)
 
     prof.completer_add('/omemo', ['on', 'off', 'status', 'start', 'end', 'set'
-                                  'account', 'fulljid', 'show_devices', 'reset_devicelist'])
+                                  'account', 'fulljid', 'show_devices',
+                                  'reset_devicelist', 'fingerprints'])
 
     prof.completer_add('/omemo set', ['message_prefix'])
 
@@ -656,3 +674,13 @@ def prof_on_disconnect(account_name, fulljid):
 def prof_on_shutdown():
     log.debug('prof_on_shutdown() called')
     ProfOmemoUser.reset()
+
+
+def human_hash(fpr):
+    fpr = fpr.upper()
+    fplen = len(fpr)
+    wordsize = fplen // 8
+    buf = ''
+    for w in range(0, fplen, wordsize):
+        buf += '{0} '.format(fpr[w:w + wordsize])
+    return buf.rstrip()
