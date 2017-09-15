@@ -303,6 +303,10 @@ def _handle_bundle_update(stanza):
     omemo_state = ProfOmemoState()
     bundle_info = xmpp.unpack_bundle_info(stanza)
 
+    if not bundle_info:
+        log.error('Could not unpack bundle info.')
+        return
+
     sender = bundle_info.get('sender')
     device_id = bundle_info.get('device')
 
