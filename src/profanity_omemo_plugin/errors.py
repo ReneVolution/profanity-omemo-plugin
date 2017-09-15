@@ -24,3 +24,7 @@ class NoOmemoMessage(Exception):
 
 class UnhandledOmemoMessage(Exception):
     pass
+
+
+class StanzaNodeNotFound(Exception):
+    pass

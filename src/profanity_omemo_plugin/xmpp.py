@@ -26,6 +26,7 @@ from base64 import b64decode, b64encode
 
 from profanity_omemo_plugin.constants import NS_OMEMO, NS_DEVICE_LIST, \
     NS_DEVICE_LIST_NOTIFY, NS_BUNDLES
+from profanity_omemo_plugin.errors import StanzaNodeNotFound
 from profanity_omemo_plugin.log import get_plugin_logger
 from profanity_omemo_plugin.prof_omemo_state import ProfOmemoState, \
     ProfOmemoUser
@@ -62,6 +63,9 @@ def find_node(xml, name, ns=None):
         # ChatSecure seems to use the wrong xml namespace
         # use a fallback here with the custom namespace for some nodes
         node = xml.find('.//{%s}%s' % ('jabber:client', name))
+
+    if node is None:
+        raise StanzaNodeNotFound('Node {0} not found.')
 
     return node
 
@@ -180,33 +184,37 @@ def unpack_bundle_info(stanza):
         # different devices
         sender = ProfOmemoUser.account
 
-    items_node = find_node(bundle_xml, 'items', ns='http://jabber.org/protocol/pubsub')
-    device_id = items_node.attrib['node'].split(':')[-1]
+    try:
+        items_node = find_node(bundle_xml, 'items', ns='http://jabber.org/protocol/pubsub')
+        device_id = items_node.attrib['node'].split(':')[-1]
 
-    bundle_node = find_node(bundle_xml, 'bundle', ns=NS_OMEMO)
+        bundle_node = find_node(bundle_xml, 'bundle', ns=NS_OMEMO)
 
-    signedPreKeyPublic_node = find_node(bundle_node, 'signedPreKeyPublic', ns=NS_OMEMO)
-    signedPreKeyPublic = signedPreKeyPublic_node.text
+        signedPreKeyPublic_node = find_node(bundle_node, 'signedPreKeyPublic', ns=NS_OMEMO)
+        signedPreKeyPublic = signedPreKeyPublic_node.text
 
-    signedPreKeyId = int(signedPreKeyPublic_node.attrib['signedPreKeyId'])
+        signedPreKeyId = int(signedPreKeyPublic_node.attrib['signedPreKeyId'])
 
-    signedPreKeySignature_node = find_node(bundle_node, 'signedPreKeySignature', ns=NS_OMEMO)
-    signedPreKeySignature = signedPreKeySignature_node.text
+        signedPreKeySignature_node = find_node(bundle_node, 'signedPreKeySignature', ns=NS_OMEMO)
+        signedPreKeySignature = signedPreKeySignature_node.text
 
-    identityKey_node = find_node(bundle_node, 'identityKey', ns=NS_OMEMO)
-    identityKey = identityKey_node.text
+        identityKey_node = find_node(bundle_node, 'identityKey', ns=NS_OMEMO)
+        identityKey = identityKey_node.text
 
-    prekeys_node = find_node(bundle_node, 'prekeys', ns=NS_OMEMO)
-    prekeys = [(int(n.attrib['preKeyId']), n.text) for n in prekeys_node]
+        prekeys_node = find_node(bundle_node, 'prekeys', ns=NS_OMEMO)
+        prekeys = [(int(n.attrib['preKeyId']), n.text) for n in prekeys_node]
 
-    picked_key_tuple = random.SystemRandom().choice(prekeys)
-    preKeyId, preKeyPublic = picked_key_tuple
+        picked_key_tuple = random.SystemRandom().choice(prekeys)
+        preKeyId, preKeyPublic = picked_key_tuple
 
-    if not preKeyId:
-        logger.warning('OMEMO PreKey has no id set')
-        return
+        if not preKeyId:
+            logger.warning('OMEMO PreKey has no id set')
+            return
 
-    if not preKeyPublic:
+        if not preKeyPublic:
+            return
+    except StanzaNodeNotFound as e:
+        logger.warning('Could not unpack bundle info. {0}'.format(e))
         return
 
     bundle_dict = {
