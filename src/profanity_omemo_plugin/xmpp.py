@@ -364,7 +364,7 @@ def create_own_bundle_stanza():
         key_node.text = key
 
     # reconvert xml to stanza
-    bundle_stanza = ET.tostring(bundle_xml, encoding='utf8', method='html')
+    bundle_stanza = ET.tostring(bundle_xml, encoding='utf-8', method='html')
     # prof.cons_show(bundle_stanza)
 
     return bundle_stanza
@@ -383,7 +383,7 @@ def create_bundle_request_stanza(account, recipient, deviceid):
     items_node = ET.SubElement(pubsub_node, 'items')
     items_node.set('node', '{0}:{1}'.format(NS_BUNDLES, deviceid))
 
-    stanza = ET.tostring(bundle_req_root, encoding='utf8', method='html')
+    stanza = ET.tostring(bundle_req_root, encoding='utf-8', method='html')
 
     return stanza
 
