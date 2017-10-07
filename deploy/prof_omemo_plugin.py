@@ -603,7 +603,7 @@ def prof_on_chat_win_focus(barejid):
     if not ProfActiveOmemoChats.account_is_registered(barejid):
         # get remembered user sessions
         u_sess = prof.settings_string_list_get(SETTINGS_GROUP, 'omemo_sessions')
-        if barejid in u_sess:
+        if u_sess and barejid in u_sess:
             _start_omemo_session(barejid)
 
 
