@@ -62,7 +62,7 @@ class ProfLogHandler(logging.Handler):
 
                 level_fn_map[record.levelno](log_message)
             except Exception as e:
-                prof.log_error('Could not log last message. {0}'.format(e.message))
+                prof.log_error('Could not log last message. {0}'.format(repr(e)))
 
 
 python_omemo_logger = logging.getLogger('omemo')
