@@ -56,9 +56,12 @@ class ProfLogHandler(logging.Handler):
 
             try:
                 log_message = self.format(record)
-                if record.levelno == 40 and record.exc_info:
-                    tb_info = record.exc_info
-                    log_message += '\n' + traceback.print_exception(*tb_info)
+                try:
+                    if record.levelno == 40 and record.exc_info:
+                        tb_info = record.exc_info
+                        log_message += '\n' + traceback.print_exception(*tb_info)
+                except TypeError:  # tb_info is None
+                    pass
 
                 level_fn_map[record.levelno](log_message)
             except Exception as e:
