@@ -26,7 +26,8 @@ from base64 import b64decode, b64encode
 
 from profanity_omemo_plugin.constants import NS_OMEMO, NS_DEVICE_LIST, \
     NS_DEVICE_LIST_NOTIFY, NS_BUNDLES
-from profanity_omemo_plugin.errors import StanzaNodeNotFound
+from profanity_omemo_plugin.errors import StanzaNodeNotFound, \
+    CouldNotCreateBundleStanza
 from profanity_omemo_plugin.log import get_plugin_logger
 from profanity_omemo_plugin.prof_omemo_state import ProfOmemoState, \
     ProfOmemoUser
@@ -45,6 +46,7 @@ logger = get_plugin_logger(__name__)
 ################################################################################
 
 def stanza_as_xml(stanza):
+    """ Converting a stanza to XML. """
     try:
         xml = ET.fromstring(stanza)
     except UnicodeEncodeError:
@@ -57,27 +59,37 @@ def find_node(xml, name, ns=None):
     node = None
 
     if ns:
-        node = xml.find('.//{%s}%s' % (ns, name))
+        xq = './/{%s}%s' % (ns, name)
+        logger.debug('Looking up node for query {0}'.format(xq))
+        node = xml.find(xq)
 
     if node is None:
         # ChatSecure seems to use the wrong xml namespace
         # use a fallback here with the custom namespace for some nodes
-        node = xml.find('.//{%s}%s' % ('jabber:client', name))
+        xq = './/{%s}%s' % ('jabber:client', name)
+        logger.debug('Fallback node lookup for query {0}'.format(xq))
+        node = xml.find(xq)
 
     if node is None:
-        raise StanzaNodeNotFound('Node {0} not found.')
+        raise StanzaNodeNotFound('Node {0} not found.'.format(name))
 
     return node
 
 
 def encrypt_stanza(stanza):
+    logger.debug('Enrypting stanza {0}'.format(stanza))
+    logger.debug('Convert stanza to xml.')
     msg_xml = stanza_as_xml(stanza)
     fulljid = msg_xml.attrib.get('from', ProfOmemoUser().fulljid)
+    logger.debug('Sender: {0}'.format(fulljid))
     jid = msg_xml.attrib['to']
-    account = jid.rsplit('/', 1)[0]
+    account, resource = jid.rsplit('/', 1)
+    logger.debug('Recipient {0} [{1}]'.format(account, resource))
     msg_id = msg_xml.attrib['id']
+    logger.debug('Message ID: {0}'.format(msg_id))
     body_node = msg_xml.find('.//body')
     plaintext = body_node.text
+    logger.debug('Message: {0}'.format(plaintext))
 
     try:
         plaintext = plaintext.encode('utf-8')
@@ -108,7 +120,9 @@ def get_recipient(stanza):
     try:
         xml = stanza_as_xml(stanza)
         recipient = xml.attrib['to']
+        logger.debug('Found recipient {0} in stanza {1}'.format(recipient, stanza))
     except:
+        logger.error('Recipient not found in stanza {0}'.format(stanza))
         return None
 
     return recipient
@@ -179,10 +193,14 @@ def unpack_bundle_info(stanza):
 
     try:
         sender = bundle_xml.attrib['from'].rsplit('/', 1)[0]
+        logger.debug('Found sender jid {0} in bundle info.'.format(sender))
     except KeyError:
         # we assume bundle updates without sender to be own bundles for
         # different devices
         sender = ProfOmemoUser.account
+        logger.debug(
+            'Fallback to known sender {0} while unpacking bundle info'.format(sender)
+        )
 
     try:
         items_node = find_node(bundle_xml, 'items', ns='http://jabber.org/protocol/pubsub')
@@ -212,7 +230,9 @@ def unpack_bundle_info(stanza):
             return
 
         if not preKeyPublic:
+            logger.warning('No Public PreKey set.')
             return
+
     except StanzaNodeNotFound as e:
         logger.warning('Could not unpack bundle info. {0}'.format(e))
         return
@@ -251,18 +271,21 @@ def unpack_encrypted_stanza(encrypted_stanza):
     :return:
     """
 
+    logger.info('Unpacking encrypted Message stanza.')
     xml = ET.fromstring(encrypted_stanza)
     if '<forwarded' in encrypted_stanza:
         xml = xml.find('.//{jabber:client}message')
 
     sender_fulljid = xml.attrib['from']
     sender, resource = sender_fulljid.rsplit('/', 1)
+    logger.debug('Found sender {0} [{1}]'.format(sender, resource))
 
     encrypted_node = xml.find('.//{%s}encrypted' % NS_OMEMO)
 
     header_node = encrypted_node.find('.//{%s}header' % NS_OMEMO)
 
     sid = int(header_node.attrib['sid'])
+    logger.debug('Found sender ID: {0}'.format(sid))
 
     iv_node = header_node.find('.//{%s}iv' % NS_OMEMO)
     iv = iv_node.text
@@ -274,6 +297,9 @@ def unpack_encrypted_stanza(encrypted_stanza):
     for node in header_node.iter():
         if node.tag == '{%s}key' % NS_OMEMO:
             keys[int(node.attrib['rid'])] = b64decode(node.text)
+
+    if not keys:
+        logger.debug('No keys found in header.')
 
     msg_dict = {
         'sender_jid': sender,
@@ -303,12 +329,15 @@ def unpack_devicelist_info(stanza):
             # device list info is result of a request for our own account
             sender_jid = ProfOmemoUser().account
 
+    logger.debug('Found sender jid {0}'.format(sender_jid))
+
     item_list = xml.find('.//{%s}list' % NS_OMEMO)
     if item_list is not None:
         device_ids = [int(d.attrib['id']) for d in item_list]
     else:
         device_ids = []
 
+    logger.debug('Found device ids {0}'.format(device_ids))
     msg_dict = {'from': sender_jid,
                 'devices': device_ids}
 
@@ -364,8 +393,11 @@ def create_own_bundle_stanza():
         key_node.text = key
 
     # reconvert xml to stanza
-    bundle_stanza = ET.tostring(bundle_xml, encoding='utf-8', method='html')
-    # prof.cons_show(bundle_stanza)
+    try:
+        bundle_stanza = ET.tostring(bundle_xml, encoding='utf-8', method='html')
+    except:
+        logger.exception('Could not convert Bunle XML to Stanza.')
+        raise CouldNotCreateBundleStanza
 
     return bundle_stanza
 
@@ -409,13 +441,14 @@ def create_encrypted_message(from_jid, to_jid, plaintext, msg_id=None):
     msg_data = omemo_state.create_msg(account, to_jid, plaintext)
 
     # build encrypted message from here
-    keys_dict = msg_data['keys']
+    keys_dict = msg_data['keys'] or {}
 
     # key is now a tuple of (key, is_prekey)
     keys_str = ''
     for rid, key_info in keys_dict.items():
         key, is_prekey = key_info
         if is_prekey:
+            logger.debug('PreKey=True')
             tpl = '<key prekey="true" rid="{0}">{1}</key>'
         else:
             tpl = '<key rid="{0}">{1}</key>'
@@ -436,6 +469,7 @@ def create_encrypted_message(from_jid, to_jid, plaintext, msg_id=None):
 
 
 def create_devicelist_update_msg(fulljid):
+    logger.debug('Create devicelist update message for jid {0}.'.format(fulljid))
     QUERY_MSG = ('<iq type="set" from="{from}" id="{id}">'
                  '<pubsub xmlns="http://jabber.org/protocol/pubsub">'
                  '<publish node="{devicelist_ns}">'
@@ -451,6 +485,7 @@ def create_devicelist_update_msg(fulljid):
     omemo_state = ProfOmemoState()
 
     own_devices = set(omemo_state.own_devices + [omemo_state.own_device_id])
+    logger.debug('Found own devices {0}'.format(own_devices))
     device_nodes = ['<device id="{0}"/>'.format(d) for d in own_devices]
 
     msg_dict = {'from': fulljid,
@@ -465,6 +500,10 @@ def create_devicelist_update_msg(fulljid):
 
 
 def create_devicelist_query_msg(sender, recipient):
+    logger.debug(
+        'Create devicelist query message from {0} to {1}'.format(sender, recipient)
+    )
+
     QUERY_MSG = ('<iq type="get" from="{from}" to="{to}" id="{id}">'
                  '<pubsub xmlns="http://jabber.org/protocol/pubsub">'
                  '<items node="{device_list_ns}" />'
@@ -480,6 +519,6 @@ def create_devicelist_query_msg(sender, recipient):
 
     query_msg = QUERY_MSG.format(**msg_dict)
 
-    logger.info('Sending Device List Query: {0}'.format(query_msg))
+    logger.debug('Sending Device List Query: {0}'.format(query_msg))
 
     return query_msg
