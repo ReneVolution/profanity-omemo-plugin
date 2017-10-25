@@ -60,6 +60,10 @@ Starts a new conversation with the given contact, if not given, the one in the c
 `/omemo end [contact jid]` </br>
 Ends the conversation with the given contact jid or, if not given, the one in the current chat 
 
+## Contributing
+
+If you want to contribute to this project, please check out [CONTRIBUTING.md](./CONTRIBUTING.md) first.
+
 ## TODO
 
 - [ ] Documentation
