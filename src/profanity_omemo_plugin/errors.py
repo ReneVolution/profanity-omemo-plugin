@@ -28,3 +28,6 @@ class UnhandledOmemoMessage(Exception):
 
 class StanzaNodeNotFound(Exception):
     pass
+
+class CouldNotCreateBundleStanza(Exception):
+    pass
