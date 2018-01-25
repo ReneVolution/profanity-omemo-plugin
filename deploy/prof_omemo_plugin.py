@@ -628,7 +628,7 @@ def prof_init(version, status, account_name, fulljid):
         ['start|end <jid>', ('Start an OMEMO based conversation with <jid> '
                              'window or current window.')],
         ['set', 'Set Settings like Message Prefix'],
-        ['status', 'Display the current Profanity OMEMO PLugin stauts.'],
+        ['status', 'Display the current Profanity OMEMO Plugin status.'],
         ['fingerprints <jid>', 'Display the known fingerprints for <jid>'],
         ['account', 'Show current account name'],
         ['reset_devicelist <jid>', 'Manually reset a contacts devicelist.'],
