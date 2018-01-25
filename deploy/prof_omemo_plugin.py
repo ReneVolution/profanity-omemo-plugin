@@ -557,7 +557,7 @@ def _parse_args(arg1=None, arg2=None, arg3=None):
 
     elif arg1 == 'status':
         enabled = _get_omemo_enabled_setting()
-        prof.cons_show('OMEMO PLugin Enabled: {0}'.format(enabled))
+        prof.cons_show('OMEMO Plugin Enabled: {0}'.format(enabled))
 
     elif arg1 == 'fulljid':
         prof.cons_show('Current JID: {0}'.format(fulljid))
