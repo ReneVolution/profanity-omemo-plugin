@@ -557,7 +557,7 @@ def _parse_args(arg1=None, arg2=None, arg3=None):
 
     elif arg1 == 'status':
         enabled = _get_omemo_enabled_setting()
-        prof.cons_show('OMEMO PLugin Enabled: {0}'.format(enabled))
+        prof.cons_show('OMEMO Plugin Enabled: {0}'.format(enabled))
 
     elif arg1 == 'fulljid':
         prof.cons_show('Current JID: {0}'.format(fulljid))
@@ -628,7 +628,7 @@ def prof_init(version, status, account_name, fulljid):
         ['start|end <jid>', ('Start an OMEMO based conversation with <jid> '
                              'window or current window.')],
         ['set', 'Set Settings like Message Prefix'],
-        ['status', 'Display the current Profanity OMEMO PLugin stauts.'],
+        ['status', 'Display the current Profanity OMEMO Plugin status.'],
         ['fingerprints <jid>', 'Display the known fingerprints for <jid>'],
         ['account', 'Show current account name'],
         ['reset_devicelist <jid>', 'Manually reset a contacts devicelist.'],
