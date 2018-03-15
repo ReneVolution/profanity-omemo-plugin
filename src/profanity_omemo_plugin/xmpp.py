@@ -390,7 +390,7 @@ def create_own_bundle_stanza():
     for key_id, key in own_bundle.get('prekeys', []):
         key_node = ET.SubElement(prekeys_node, 'preKeyPublic',
                                  attrib={'preKeyId': str(key_id)})
-        key_node.text = key
+        key_node.text = str(key)
 
     # reconvert xml to stanza
     try:
@@ -452,7 +452,7 @@ def create_encrypted_message(from_jid, to_jid, plaintext, msg_id=None):
             tpl = '<key prekey="true" rid="{0}">{1}</key>'
         else:
             tpl = '<key rid="{0}">{1}</key>'
-        keys_str += tpl.format(rid, b64encode(key))
+        keys_str += tpl.format(rid, b64encode(key).decode('ascii'))
 
     msg_dict = {'to': to_jid,
                 'from': from_jid,
@@ -460,8 +460,8 @@ def create_encrypted_message(from_jid, to_jid, plaintext, msg_id=None):
                 'omemo_ns': NS_OMEMO,
                 'sid': msg_data['sid'],
                 'keys': keys_str,
-                'iv': b64encode(msg_data['iv']),
-                'enc_body': b64encode(msg_data['payload'])}
+                'iv': b64encode(msg_data['iv']).decode('ascii'),
+                'enc_body': b64encode(msg_data['payload']).decode('ascii')}
 
     enc_msg = OMEMO_MSG.format(**msg_dict)
 
