@@ -83,7 +83,7 @@ def encrypt_stanza(stanza):
     fulljid = msg_xml.attrib.get('from', ProfOmemoUser().fulljid)
     logger.debug('Sender: {0}'.format(fulljid))
     jid = msg_xml.attrib['to']
-    account, resource = jid.rsplit('/', 1)
+    account, resource = jid.rsplit('/', 1) if '/' in jid else (jid, '')
     logger.debug('Recipient {0} [{1}]'.format(account, resource))
     msg_id = msg_xml.attrib['id']
     logger.debug('Message ID: {0}'.format(msg_id))
