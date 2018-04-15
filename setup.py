@@ -31,7 +31,7 @@ else:
 class CustomInstallCommand(install):
     def run(self):
         # Call parent
-        install.do_egg_install(self)
+        super().run()
 
         # Install the actual profanity-omemo.py to the profanity plugins folder.
         print('do post install stuff here...')
