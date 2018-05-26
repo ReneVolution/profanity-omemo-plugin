@@ -25,7 +25,7 @@ requirements = [
 if platform.python_implementation() == 'PyPy':
     requirements += ['pycrypto']
 else:
-    requirements += ['cryptography>=1.1']
+    requirements += ['cryptography>=1.1', 'pycrypto']
 
 
 class CustomInstallCommand(install):
