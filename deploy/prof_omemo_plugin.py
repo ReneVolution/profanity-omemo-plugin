@@ -578,17 +578,23 @@ def _parse_args(arg1=None, arg2=None, arg3=None):
             _query_device_list(contact_jid)
 
     elif arg1 == 'fingerprints':
-        contact_jid = arg2 or ProfOmemoUser.account
+        if arg2:
+            contact_jid = query_jid = arg2
+        else:
+            # The local account is identified as '-1' in the OMEMO database
+            contact_jid = ProfOmemoUser.account
+            query_jid = '-1'
         omemo_state = ProfOmemoState()
 
-        fingerprints = omemo_state.getFingerprints(contact_jid)
+        fingerprints = omemo_state.getFingerprints(query_jid)
         prof.cons_show('Fingerprints for account: {0}'.format(contact_jid))
+
         for record in fingerprints:
             _id, recipient_id, public_key, trust = record
             fpr = binascii.hexlify(public_key)
             fpr = human_hash(fpr[2:])
 
-            prof.cons_show('{0}: {1}'.format(recipient_id, fpr))
+            prof.cons_show(' {0}'.format(fpr))
 
     else:
         prof.cons_show('Argument {0} not supported.'.format(arg1))
@@ -682,5 +688,5 @@ def human_hash(fpr):
     wordsize = fplen // 8
     buf = ''
     for w in range(0, fplen, wordsize):
-        buf += '{0} '.format(fpr[w:w + wordsize])
+        buf += '{0} '.format(fpr[w:w + wordsize].decode())
     return buf.rstrip()
