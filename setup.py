@@ -28,15 +28,6 @@ else:
     requirements += ['cryptography>=1.1', 'pycrypto']
 
 
-class CustomInstallCommand(install):
-    def run(self):
-        # Call parent
-        super().run()
-
-        # Install the actual profanity-omemo.py to the profanity plugins folder.
-        print('do post install stuff here...')
-
-
 setup(
     name='profanity-omemo-plugin',
     version='0.0.1',
@@ -73,7 +64,4 @@ setup(
     install_requires=requirements,
     setup_requires=['pytest-runner'],
     tests_require=['pytest', 'mock'],
-
-    # Extend the install command with a post_install command
-    cmdclass={'install': CustomInstallCommand},
 )
